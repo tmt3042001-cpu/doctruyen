@@ -213,6 +213,18 @@
             <option value="1.3">Tốc độ: 1.3x</option>
         </select>
     </div>
+    <!-- Bộ hẹn giờ tắt (Sleep Timer) -->
+    <div class="tool-group">
+        <span>⏱ Hẹn giờ:</span>
+        <select id="sleep-timer" onchange="startSleepTimer(this.value)" style="padding: 5px;">
+            <option value="0" selected>Tắt</option>
+            <option value="15">15 phút</option>
+            <option value="30">30 phút</option>
+            <option value="45">45 phút</option>
+            <option value="60">60 phút</option>
+        </select>
+        <span id="timer-countdown" style="font-weight: bold; color: #27ae60; display: none;"></span>
+    </div>
 
     <div class="tool-group">
         <span>Chữ:</span>
@@ -460,10 +472,55 @@
             }, 40);
         }
     }
-
-    function changeScrollSpeed(val) {
+        function changeScrollSpeed(val) {
         scrollSpeed = parseInt(val);
     }
+
+    // --- TÍNH NĂNG 4: HẸN GIỜ TẮT AUDIO & SCROLL ---
+    let sleepTimeout = null;
+    let countdownInterval = null;
+
+    function startSleepTimer(minutes) {
+        const val = parseInt(minutes);
+        const countdownLabel = document.getElementById('timer-countdown');
+        
+        // Xóa các bộ hẹn giờ cũ nếu người dùng chọn lại thời gian
+        clearTimeout(sleepTimeout);
+        clearInterval(countdownInterval);
+        countdownLabel.style.display = 'none';
+
+        if (val === 0) return; // Nếu chọn "Tắt" thì dừng lại
+
+        let timeRemaining = val * 60; // Đổi phút thành giây
+        countdownLabel.style.display = 'inline';
+        
+        // Hàm cập nhật chữ hiển thị đếm ngược (Ví dụ: 14:59)
+        function updateCountdownDisplay() {
+            let mins = Math.floor(timeRemaining / 60);
+            let secs = timeRemaining % 60;
+            countdownLabel.innerText = `(${mins}:${secs < 10 ? '0' : ''}${secs})`;
+        }
+        
+        updateCountdownDisplay();
+
+        // Chạy bộ đếm ngược mỗi giây
+        countdownInterval = setInterval(() => {
+            timeRemaining--;
+            if (timeRemaining <= 0) {
+                clearInterval(countdownInterval);
+                countdownLabel.style.display = 'none';
+                document.getElementById('sleep-timer').value = "0"; // Reset ô chọn về Tắt
+                
+                // HÀNH ĐỘNG KHI HẾT GIỜ: Tắt toàn bộ Audio và Auto Scroll
+                if (isSpeaking) { toggleAudio(); }
+                if (isScrolling) { toggleAutoScroll(); }
+                alert("⏱ Đã hết giờ hẹn! Ứng dụng đã tự động dừng đọc và cuộn.");
+            } else {
+                updateCountdownDisplay();
+            }
+        }, 1000);
+    }
+
 
     async function loadStoryFile() {
         try {
