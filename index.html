@@ -313,11 +313,21 @@
 </div>
 
 <script>
+      // Đảm bảo điền đúng tên file truyện .txt của bạn trên GitHub ở đây
     const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
     let currentSize = 18;
+    
+    // ĐOẠN SỬA LỖI: Khai báo lại luồng xử lý Audio
+    let synth = window.speechSynthesis;
+    let currentUtterance = null;
+    let isSpeaking = false;
+    let currentSpeed = 1.0;
+    let sleepTimeout = null;
+    let countdownInterval = null;
+
         // Biến toàn cục theo dõi vị trí cuộn màn hình
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
