@@ -195,7 +195,7 @@
 <body>
 <!-- THANH TIẾN TRÌNH ĐỌC NẰM TRÊN CÙNG MÀN HÌNH -->
 <div id="progress-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 4px; background-color: rgba(0,0,0,0.1); z-index: 9999;">
-    <div id="progress-bar" style="width: 0%; height: 100%; background-color: #e5a93b; transition: width 0.1s ease;"></div>
+    <div id="progress-bar" style="width: 0%; height: 100%; background-color: #2ecc71; transition: width 0.1s ease;"></div>
 </div>
 
 <div class="toolbar">
@@ -219,6 +219,16 @@
         <button onclick="changeFontSize(-1)">A-</button>
         <button onclick="changeFontSize(1)">A+</button>
     </div>
+        <!-- Bộ điều khiển Tự động cuộn -->
+    <div class="tool-group">
+        <button id="scroll-btn" onclick="toggleAutoScroll()">⭳ Cuộn Tự Động</button>
+        <select id="scroll-speed" onchange="changeScrollSpeed(this.value)" style="padding: 5px;">
+            <option value="1">Tốc độ: Chậm</option>
+            <option value="2" selected>Tốc độ: Vừa</option>
+            <option value="4">Tốc độ: Nhanh</option>
+        </select>
+    </div>
+
     <div class="tool-group">
         <span>Phông:</span>
         <select id="font-select" onchange="setReaderFont(this.value)">
@@ -422,6 +432,38 @@
     if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
+    // --- TÍNH NĂNG 3: TỰ ĐỘNG CUỘN TRANG ---
+    let scrollInterval = null;
+    let isScrolling = false;
+    let scrollSpeed = 2; // Mặc định là tốc độ Vừa (mỗi lần cuộn 2px)
+
+    function toggleAutoScroll() {
+        const btn = document.getElementById('scroll-btn');
+        if (isScrolling) {
+            clearInterval(scrollInterval);
+            isScrolling = false;
+            btn.innerText = "⭳ Cuộn Tự Động";
+            btn.classList.remove('audio-active'); // Bỏ màu nổi bật của nút
+        } else {
+            isScrolling = true;
+            btn.innerText = "⏸ Dừng Cuộn";
+            btn.classList.add('audio-active'); // Thêm màu nổi bật để biết đang bật
+            
+            // Cứ mỗi 40 mili giây sẽ cuộn màn hình xuống một chút
+            scrollInterval = setInterval(function() {
+                window.scrollBy(0, scrollSpeed);
+                
+                // Nếu đã cuộn xuống tận cùng trang web thì tự động dừng lại
+                if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight) {
+                    toggleAutoScroll();
+                }
+            }, 40);
+        }
+    }
+
+    function changeScrollSpeed(val) {
+        scrollSpeed = parseInt(val);
+    }
 
     async function loadStoryFile() {
         try {
@@ -489,6 +531,8 @@
     }
 
     function renderChapter() {
+                if (isScrolling) { toggleAutoScroll(); } // Tắt cuộn tự động khi sang chương mới
+
         if (chapters.length === 0) return;
         
         // Nếu đang đổi chương, tắt tiếng chương cũ để tránh đè âm thanh
