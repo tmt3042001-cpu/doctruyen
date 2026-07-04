@@ -4,15 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trang Đọc Truyện Cá Nhân Pro</title>
-    <!-- Nhúng các phông chữ phổ biến từ Google Fonts -->
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
     <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
-        /* THIẾT LẬP CÁC BIẾN MÀU NỀN TIÊU CHUẨN */
         :root {
-            --bg-body: #f7f4eb;     /* Mặc định: Trắng kem */
+            --bg-body: #f7f4eb;
             --bg-container: #faf8f5;
             --text-color: #2b2b2b;
             --border-color: #eae6db;
@@ -37,7 +35,6 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* THANH CÔNG CỤ TÙY BIẾN (SETTINGS BAR) */
         .toolbar {
             max-width: 680px;
             width: 100%;
@@ -71,7 +68,6 @@
             cursor: pointer;
         }
 
-        /* KHỐI CHỨA TRUYỆN CHÍNH */
         .container {
             max-width: 680px;
             width: 100%;
@@ -101,12 +97,10 @@
             letter-spacing: 0.2px;
         }
 
-        /* GIAO DIỆN MỤC LỤC POPUP */
         .toc-sidebar {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 300px;
             height: 100%;
             background-color: var(--bg-container);
@@ -158,7 +152,6 @@
             z-index: 999;
         }
 
-        /* KHỐI ĐIỀU HƯỚNG CHUYỂN CHƯƠNG */
         .navigation {
             display: flex;
             justify-content: space-between;
@@ -194,20 +187,15 @@
 </head>
 <body>
 
-<!-- THANH CÔNG CỤ TÙY BIẾN -->
 <div class="toolbar">
     <div class="tool-group">
         <button onclick="toggleTOC()">☰ Mục Lục</button>
     </div>
-    
-    <!-- Tăng giảm cỡ chữ -->
     <div class="tool-group">
         <span>Chữ:</span>
         <button onclick="changeFontSize(-1)">A-</button>
         <button onclick="changeFontSize(1)">A+</button>
     </div>
-
-    <!-- Chọn Phông Chữ -->
     <div class="tool-group">
         <span>Phông:</span>
         <select id="font-select" onchange="setReaderFont(this.value)">
@@ -217,8 +205,6 @@
             <option value="'Playfair Display', serif">Playfair (Cổ điển)</option>
         </select>
     </div>
-
-    <!-- Chọn Màu Nền -->
     <div class="tool-group">
         <span>Giao diện:</span>
         <select id="theme-select" onchange="setReaderTheme(this.value)">
@@ -229,7 +215,6 @@
     </div>
 </div>
 
-<!-- NỀN ẨN VÀ DIỆN MỤC LỤC POPUP -->
 <div class="overlay" id="overlay" onclick="toggleTOC()"></div>
 <div class="toc-sidebar" id="toc-sidebar">
     <div class="toc-header">
@@ -239,7 +224,6 @@
     <ul class="toc-list" id="toc-list"></ul>
 </div>
 
-<!-- KHUNG NỘI DUNG ĐỌC TRUYỆN -->
 <div class="container">
     <h1 id="chapter-title">Đang quét dữ liệu...</h1>
     <div class="content" id="chapter-content">Vui lòng chờ trong giây lát...</div>
@@ -249,16 +233,14 @@
         <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
     </div>
 </div>
-
 <script>
-    // Điền chính xác tên file .txt chứa nội dung truyện của bạn ở đây
+    // CHÚ Ý: Đổi tên file .txt cho đúng với tên file truyện của bạn trên GitHub
     const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
     let currentSize = 18;
 
-    // 1. Quản lý trạng thái giao diện, cỡ chữ, phông chữ
     function initSettings() {
         const savedSize = localStorage.getItem('reader-size');
         if (savedSize) {
@@ -301,7 +283,7 @@
             root.style.setProperty('--bg-body', '#f4ecd8');
             root.style.setProperty('--bg-container', '#fdf6e3');
             root.style.setProperty('--text-color', '#332a15');
-root.style.setProperty('--border-color', '#e1d4b3');
+            root.style.setProperty('--border-color', '#e1d4b3');
         } else if (theme === 'toi') {
             root.style.setProperty('--bg-body', '#141414');
             root.style.setProperty('--bg-container', '#1e1e1e');
@@ -310,90 +292,121 @@ root.style.setProperty('--border-color', '#e1d4b3');
         }
         localStorage.setItem('reader-theme', theme);
     }
-    // 2. Bật/Tắt Menu Mục Lục
-    function toggleTOC() {const sidebar = document.getElementById('toc-sidebar');
-                          const overlay = document.getElementById('overlay');
-                          if (sidebar.style.display === 'flex') {sidebar.style.display = 'none';overlay.style.display = 'none';
-                                                                } else {
-                              sidebar.style.display = 'flex';overlay.style.display = 'block';
-                              const items = document.querySelectorAll('.toc-list li');
-                              items.forEach((item, idx) => {
-                                  if (idx === currentChapterIndex) item.classList.add('active');
-                                  else item.classList.remove('active');
-                              });
-                          }
-                         }
-    // 3. Tải và bóc tách dữ liệu file .txt truyện chữ theo ký tự "===" bằng thuật toán mảng async function loadStoryFile() {
-    try {
-        const response = await fetch(FILE_NAME);
-        const buffer = await response.arrayBuffer();
-        const decoder = new TextDecoder('utf-8');
-        const text = decoder.decode(buffer);
-        // Chia nhỏ nội dung file theo cụm từ "==="
-        const parts = text.split('===');chapters = [];
-        // Nếu mảng rỗng hoặc không chứa cấu trúc tách chương
-        if (parts.length < 3) {
-            chapters.push({ title: "Nội dung cuốn truyện", content: text.trim() });
+
+    function toggleTOC() {
+        const sidebar = document.getElementById('toc-sidebar');
+        const overlay = document.getElementById('overlay');
+        if (sidebar.style.display === 'flex') {
+            sidebar.style.display = 'none';
+            overlay.style.display = 'none';
         } else {
-            // Thuật toán duyệt mảng thủ công: Cứ mỗi cặp giá trị sẽ là một Tiêu Đề và một Nội Dung
-            for (let i = 1; i < parts.length; i += 2) {
-                if (parts[i] && parts[i+1]) {chapters.push({title: parts[i].trim(),content: parts[i+1].trim()
-                                                           });
-                                            }
+            sidebar.style.display = 'flex';
+            overlay.style.display = 'block';
+            const items = document.querySelectorAll('.toc-list li');
+            items.forEach((item, idx) => {
+                if (idx === currentChapterIndex) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+        }
+    }
+
+    async function loadStoryFile() {
+        try {
+            const response = await fetch(FILE_NAME);
+            if (!response.ok) {
+                throw new Error("Không tìm thấy file truyện .txt hoặc lỗi đường truyền mạng.");
             }
+            const buffer = await response.arrayBuffer();
+            const decoder = new TextDecoder('utf-8');
+            const text = decoder.decode(buffer);
+            
+            const regex = /===\s*(.*?)\s*===/g;
+            let matches = [];
+            let match;
+            
+            while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                    title: match[1].trim(),
+                    index: match.index,
+                    lastIndex: regex.lastIndex
+                });
+            }
+            
+            chapters = [];
+            if (matches.length === 0) {
+                chapters.push({ title: "Toàn bộ nội dung", content: text.trim() });
+            } else {
+                for (let i = 0; i < matches.length; i++) {
+                    let start = matches[i].lastIndex;
+                    let end = text.length;
+                    if (i + 1 < matches.length) {
+                        end = matches[i + 1].index;
+                    }
+                    let body = text.substring(start, end).trim();
+                    chapters.push({
+                        title: matches[i].title,
+                        content: body
+                    });
+                }
+            }
+            
+            const tocList = document.getElementById('toc-list');
+            tocList.innerHTML = "";
+            chapters.forEach((chap, index) => {
+                let li = document.createElement('li');
+                li.innerText = chap.title;
+                li.onclick = () => {
+                    jumpToChapter(index);
+                    toggleTOC();
+                };
+                tocList.appendChild(li);
+            });
+
+            const savedChapter = localStorage.getItem('current-chapter-index');
+            if (savedChapter && parseInt(savedChapter) < chapters.length) {
+                currentChapterIndex = parseInt(savedChapter);
+            } else {
+                currentChapterIndex = 0;
+            }
+            
+            renderChapter();
+        } catch (error) {
+            document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi hệ thống:</span> ${error.message}<br><br>Hãy mở file index.html sửa dòng số 4 của Phần 2 cho trùng khớp hoàn toàn với tên file truyện .txt của bạn trên GitHub.`;
         }
-        // Xây dựng danh sách chương đổ vào Menu mục lục
-        const tocList = document.getElementById('toc-list');
-        tocList.innerHTML = "";
-        chapters.forEach((chap, index) => {
-            let li = document.createElement('li');
-            li.innerText = chap.title;
-            li.onclick = () => {
-                jumpToChapter(index);
-                toggleTOC();
-            };
-            tocList.appendChild(li);
-        });
-        // Khôi phục lại chương cũ đang đọc dở trước đó
-        const savedChapter = localStorage.getItem('current-chapter-index');
-        if (savedChapter && parseInt(savedChapter) < chapters.length) {
-            currentChapterIndex = parseInt(savedChapter);
-        } else {
-            currentChapterIndex = 0;
-        }
-        renderChapter();
-    } catch (error) {
-        document.getElementById('chapter-content').innerText = "Không tìm thấy file truyện hoặc lỗi kết nối. Hãy đảm bảo file .txt nằm cùng thư mục với file index.html. Chi tiết: " + error.message;
     }
-    }
-    // 4. Cơ chế hiển thị & Điều hướng chương truyện
+
     function renderChapter() {
         if (chapters.length === 0) return;
+        
         const chap = chapters[currentChapterIndex];
         document.getElementById('chapter-title').innerText = chap.title;
         document.getElementById('chapter-content').innerText = chap.content;
+        
         document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);
         document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);
+        
         localStorage.setItem('current-chapter-index', currentChapterIndex);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
     function changeChapter(direction) {
-        currentChapterIndex += direction; 
+        currentChapterIndex += direction;
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
-                                           renderChapter();
-                                       }
-                                      }
+            renderChapter();
+        }
+    }
+
     function jumpToChapter(index) {
         if (index >= 0 && index < chapters.length) {
             currentChapterIndex = index;
             renderChapter();
         }
     }
+
     window.onload = () => {
         initSettings();
         loadStoryFile();
     };
 </script>
-
 </body>
 </html>
