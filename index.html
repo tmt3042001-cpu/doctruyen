@@ -101,6 +101,59 @@
             .fixed-navigation { border-radius: 0; padding: 10px; }
             .nav-btn { padding: 8px 14px; font-size: 13px; }
         }
+        /* KHẮC PHỤC LỖI BUNG MỤC LỤC: ẨN VÀ ĐƯA MỤC LỤC VỀ SIDEBAR BÊN TRÁI */
+        .toc-sidebar {
+            display: none; /* Bắt buộc ẩn đi khi mới vào trang */
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 320px;
+            height: 100%;
+            background-color: var(--bg-container);
+            border-right: 1px solid var(--border-color);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.15);
+            z-index: 1001; /* Luôn nổi lên trên cùng màn hình */
+            padding: 20px;
+            box-sizing: border-box;
+            flex-direction: column;
+        }
+
+        /* Lớp nền mờ màu đen để ẩn nội dung truyện phía sau khi mở mục lục */
+        .overlay {
+            display: none; /* Bắt buộc ẩn đi khi mới vào trang */
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        /* Định dạng danh sách chương chữ gọn gàng hơn */
+        .toc-list {
+            overflow-y: auto;
+            flex-grow: 1;
+            list-style: none;
+            padding: 0;
+            margin: 15px 0 0 0;
+        }
+
+        .toc-list li {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+        }
+
+        .toc-list li:hover, .toc-list li.active {
+            background-color: var(--bg-body);
+            font-weight: 600;
+        }
 
 
     </style>
