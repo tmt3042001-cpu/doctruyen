@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trang Đọc Truyện Cá Nhân</title>
     <style>
-        /* GIAO DIỆN TỐI ƯU CHO MẮT (MÀU NỀN SEPIA/DARK BẢO VỆ MẮT) */
+        /* THIẾT KẾ MÀU SẮC TIÊU CHUẨN - DARK MODE DỊU MẮT */
         body {
-            background-color: #1e1e1e;
-            color: #e0dcd3;
-            font-family: 'Georgia', 'Times New Roman', serif; /* Font chữ tiêu chuẩn của Ebook */
-            font-size: 20px; /* Cỡ chữ vừa vặn, không mỏi mắt */
-            line-height: 1.6; /* Khoảng cách dòng chuẩn */
+            background-color: #1a1a1a;
+            color: #d1c7bd;
+            /* Phông chữ Serif tiêu chuẩn chống mỏi mắt tốt nhất trên thiết bị di động */
+            font-family: 'Times New Roman', 'Georgia', serif; 
+            font-size: 21px; /* Cỡ chữ đọc sách tiêu chuẩn chuyên nghiệp */
+            line-height: 1.65; /* Khoảng cách dòng chuẩn của Ebook */
             margin: 0;
             padding: 20px;
             display: flex;
@@ -19,67 +20,72 @@
             align-items: center;
         }
         .container {
-            max-width: 700px; /* Độ rộng tối ưu tầm mắt */
+            max-width: 680px; /* Chiều rộng quét mắt tối ưu giúp không bị mỏi cổ */
             width: 100%;
-            background-color: #262626;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background-color: #222222;
+            padding: 35px 30px;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             box-sizing: border-box;
         }
         h1 {
             font-size: 26px;
-            color: #f1b855; /* Màu tiêu đề nổi bật nhưng dịu mắt */
+            color: #e5a93b; /* Vàng ấm dịu mắt */
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #3a3a3a;
+            margin-top: 0;
+            margin-bottom: 25px;
+            line-height: 1.4;
             padding-bottom: 15px;
+            border-bottom: 2px solid #333;
         }
+        /* CĂN CHỈNH ĐỊNH DẠNG VĂN BẢN TRUYỆN CHUẨN FILE TXT */
         .content {
-            white-space: pre-line; /* Giữ nguyên định dạng xuống dòng từ file txt */
-            text-align: justify;
+            white-space: pre-wrap; /* Giữ nguyên 100% dấu xuống dòng và thụt dòng của file gốc */
+            text-align: justify; /* Căn đều hai bên thẳng hàng thẳng lối giống trang sách */
             word-wrap: break-word;
+            letter-spacing: 0.3px; /* Khoảng cách giữa các chữ thưa dễ nhìn */
         }
-        /* THIẾT KẾ NÚT CHUYỂN CHƯƠNG */
+        /* KHỐI ĐIỀU HƯỚNG CHUYỂN CHƯƠNG */
         .navigation {
             display: flex;
             justify-content: space-between;
-            margin-top: 40px;
-            border-top: 1px solid #3a3a3a;
+            margin-top: 45px;
             padding-top: 20px;
+            border-top: 2px solid #333;
         }
         button {
-            background-color: #f1b855;
-            color: #1e1e1e;
+            background-color: #e5a93b;
+            color: #1a1a1a;
             border: none;
-            padding: 12px 24px;
+            padding: 12px 26px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 5px;
-            transition: 0.2s;
+            border-radius: 4px;
+            transition: background 0.2s;
         }
         button:hover {
-            background-color: #db9f3b;
+            background-color: #c9912b;
         }
         button:disabled {
-            background-color: #444;
-            color: #888;
+            background-color: #3a3a3a;
+            color: #666;
             cursor: not-allowed;
         }
-        /* Giao diện mobile */
+        /* Tối ưu hiển thị cho điện thoại màn hình nhỏ */
         @media (max-width: 600px) {
-            body { font-size: 18px; padding: 10px; }
-            .container { padding: 15px; }
+            body { font-size: 19px; padding: 8px; }
+            .container { padding: 20px 15px; }
             h1 { font-size: 22px; }
+            button { padding: 10px 18px; font-size: 15px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 id="chapter-title">Đang tải truyện...</h1>
-    <div class="content" id="chapter-content">Vui lòng đợi trong giây lát...</div>
+    <h1 id="chapter-title">Đang kết nối file...</h1>
+    <div class="content" id="chapter-content">Vui lòng chờ trong giây lát...</div>
     
     <div class="navigation">
         <button id="prev-btn" onclick="changeChapter(-1)">« Chương Trước</button>
@@ -88,59 +94,75 @@
 </div>
 
 <script>
-    // Điền chính xác tên file truyện bạn đã cào vào mảng dưới đây
-    const storyFiles = [
-        "Hoang_Co_Thanh_The_Phan_1.txt",
-        // Lần sau có thêm file, bạn chỉ cần phẩy xuống dòng điền tiếp vào đây
-    ];
+    // Điền chính xác tên file .txt chứa nội dung của bạn ở đây
+    const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
-    let currentFileIndex = 0;
     let chapters = [];
     let currentChapterIndex = 0;
 
-    // Hàm đọc file .txt và bóc tách cấu trúc === Chương X ===
-    async function loadStory() {
+    async function loadStoryFile() {
         try {
-            const response = await fetch(storyFiles[currentFileIndex]);
-            const text = await response.text();
+            const response = await fetch(FILE_NAME);
             
-            // Tách các chương dựa trên ký tự nhận diện "=== Tiêu đề ==="
-            const rawChapters = text.split(/===\s*(.*?)\s*===/g);
+            // XỬ LÝ LỖI PHÔNG CHỮ: Ép trình duyệt đọc file .txt bằng chuẩn mã hóa Tiếng Việt (UTF-8)
+            const buffer = await response.arrayBuffer();
+            const decoder = new TextDecoder('utf-8');
+            const text = decoder.decode(buffer);
             
-            chapters = [];
-            for (let i = 1; i < rawChapters.length; i += 2) {
-                chapters.push({
-                    title: rawChapters[i].strip ? rawChapters[i].strip() : rawChapters[i],
-                    content: rawChapters[i + 1] ? rawChapters[i + 1].trim() : ""
+            // Tìm kiếm tất cả các tiêu đề chương dạng: === Chương X: Tên Chương ===
+            const regex = /===\s*(Chương\s+\d+.*?)\s*===/gi;
+            
+            let matches = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                    title: match[1].trim(),
+                    index: match.index,
+                    lastIndex: regex.lastIndex
                 });
+            }
+            
+            if (matches.length === 0) {
+                // Nếu file .txt không có ký tự ===, hiển thị toàn bộ nội dung file làm 1 chương
+                chapters.push({ title: "Toàn bộ nội dung truyện", content: text.trim() });
+            } else {
+                // Bóc tách nội dung văn bản nằm giữa các thẻ tiêu đề chương
+                for (let i = 0; i < matches.length; i++) {
+                    let start = matches[i].lastIndex;
+                    let end = (i + 1 < matches.length) ? matches[i + 1].index : text.length;
+                    let body = text.substring(start, end).trim();
+                    
+                    chapters.push({
+                        title: matches[i].title,
+                        content: body
+                    });
+                }
             }
             
             if (chapters.length > 0) {
                 currentChapterIndex = 0;
                 renderChapter();
-            } else {
-                document.getElementById('chapter-content').innerText = "Không tìm thấy định dạng chương chuẩn trong file txt.";
             }
         } catch (error) {
-            document.getElementById('chapter-content').innerText = "Lỗi khi tải file truyện: " + error.message;
+            document.getElementById('chapter-content').innerText = "Không thể tải file truyện. Hãy đảm bảo bạn đã lưu đúng tên file truyện .txt nằm chung một thư mục. Chi tiết lỗi: " + error.message;
         }
     }
 
-    // Hiển thị nội dung lên màn hình
     function renderChapter() {
+        if (chapters.length === 0) return;
+        
         const chap = chapters[currentChapterIndex];
         document.getElementById('chapter-title').innerText = chap.title;
         document.getElementById('chapter-content').innerText = chap.content;
         
-        // Cập nhật trạng thái nút bấm ẩn/hiện
+        // Điều khiển kích hoạt bật/tắt nút chuyển đổi
         document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);
         document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);
         
-        // Tự động cuộn lên đầu trang khi chuyển chương mới
+        // Tự động cuộn mượt màn hình lên đầu trang khi sang chương mới
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Điều hướng chương trước/sau
     function changeChapter(direction) {
         currentChapterIndex += direction;
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
@@ -148,8 +170,7 @@
         }
     }
 
-    // Kích hoạt khi trang tải xong
-    window.onload = loadStory;
+    window.onload = loadStoryFile;
 </script>
 
 </body>
