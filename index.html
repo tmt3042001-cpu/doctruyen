@@ -281,263 +281,9 @@
     <button id="prev-btn" class="nav-btn" onclick="changeChapter(-1)">« Chương Trước</button>
     <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
 </div>
+
 <script>
-    // CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
-    const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
-
-    let chapters = [];
-    let currentChapterIndex = 0;
-    let currentSize = 18;
-        let synth = window.speechSynthesis;
-    let currentUtterance = null;
-    let isSpeaking = false;
-    let currentSpeed = 1.0;
-    let sleepTimeout = null;
-    let countdownInterval = null;
-
-    function initSettings() {
-        const savedSize = localStorage.getItem('reader-size');
-        if (savedSize) {
-            currentSize = parseInt(savedSize);
-            document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
-        }
-        const savedFont = localStorage.getItem('reader-font');
-        if (savedFont) {
-            document.documentElement.style.setProperty('--font-reader', savedFont);
-            document.getElementById('font-select').value = savedFont;
-        }
-        const savedTheme = localStorage.getItem('reader-theme');
-        if (savedTheme) {
-            setReaderTheme(savedTheme);
-            document.getElementById('theme-select').value = savedTheme;
-        }
-        
-        // Kích hoạt tính năng theo dõi cuộn màn hình để đẩy thanh tiến trình xanh lá
-        window.onscroll = function() {
-            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
-            document.getElementById("progress-bar").style.width = scrolled + "%";
-        };
-    }
-
-    function changeFontSize(delta) {
-        currentSize += delta;
-        if (currentSize < 14) currentSize = 14;
-        if (currentSize > 32) currentSize = 32;
-        document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
-        localStorage.setItem('reader-size', currentSize);
-    }
-
-    /* ĐỊNH DẠNG MÀU SẮC GIAO DIỆN KHỚP THANH CỐ ĐỊNH */
-    function setReaderFont(fontFamily) {
-        document.documentElement.style.setProperty('--font-reader', fontFamily);
-        localStorage.setItem('reader-font', fontFamily);
-    }
-
-    function setReaderTheme(theme) {
-        const root = document.documentElement;
-        if (theme === 'kem') {
-            root.style.setProperty('--bg-body', '#f7f4eb');
-            root.style.setProperty('--bg-container', '#faf8f5');
-            root.style.setProperty('--text-color', '#2b2b2b');
-            root.style.setProperty('--border-color', '#eae6db');
-            root.style.setProperty('--btn-bg', '#2b2b2b');
-            root.style.setProperty('--btn-text', '#f7f4eb');
-        } else if (theme === 'vang') {
-            root.style.setProperty('--bg-body', '#f4ecd8');
-            root.style.setProperty('--bg-container', '#fdf6e3');
-            root.style.setProperty('--text-color', '#332a15');
-            root.style.setProperty('--border-color', '#e1d4b3');
-            root.style.setProperty('--btn-bg', '#332a15');
-            root.style.setProperty('--btn-text', '#fdf6e3');
-        } else if (theme === 'toi') {
-            root.style.setProperty('--bg-body', '#141414');
-            root.style.setProperty('--bg-container', '#1e1e1e');
-            root.style.setProperty('--text-color', '#b5b5b5');
-            root.style.setProperty('--border-color', '#2d2d2d');
-            root.style.setProperty('--btn-bg', '#b5b5b5');
-            root.style.setProperty('--btn-text', '#141414');
-        }
-        localStorage.setItem('reader-theme', theme);
-    }
-
-    function toggleTOC() {
-        const sidebar = document.getElementById('toc-sidebar');
-        const overlay = document.getElementById('overlay');
-        if (sidebar.style.display === 'flex') {
-            sidebar.style.display = 'none';
-            overlay.style.display = 'none';
-        } else {
-            sidebar.style.display = 'flex';
-            overlay.style.display = 'block';
-            const items = document.querySelectorAll('.toc-list li');
-            items.forEach((item, idx) => {
-                if (idx === currentChapterIndex) item.classList.add('active');
-                else item.classList.remove('active');
-            });
-        }
-    }
-
-    /* THUẬT TOÁN AUDIO GIỌNG NỮ TIẾNG VIỆT */
-    function getVietnameseFemaleVoice() {
-        if (!synth) return null;
-        let voices = synth.getVoices();
-        let femaleVoice = voices.find(voice => 
-            voice.lang.includes('vi') && 
-            (voice.name.toLowerCase().includes('female') || 
-             voice.name.toLowerCase().includes('google') || 
-             voice.name.toLowerCase().includes('hoaiami') || 
-             voice.name.toLowerCase().includes('an'))
-        );
-        if (!femaleVoice) {
-            femaleVoice = voices.find(voice => voice.lang.includes('vi'));
-        }
-        return femaleVoice;
-    }
-
-    function toggleAudio() {
-        const btn = document.getElementById('audio-btn');
-        if (isSpeaking) {
-            synth.cancel();
-            isSpeaking = false;
-            btn.innerText = "▶ Đọc";
-            btn.classList.remove('audio-active');
-        } else {
-            const textToRead = document.getElementById('chapter-content').innerText;
-            if (!textToRead) return;
-            synth.cancel();
-
-            currentUtterance = new SpeechSynthesisUtterance(textToRead);
-            const voice = getVietnameseFemaleVoice();
-            if (voice) currentUtterance.voice = voice;
-            currentUtterance.rate = currentSpeed;
-
-            currentUtterance.onend = () => {
-                isSpeaking = false;
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-                if (currentChapterIndex < chapters.length - 1) {
-                    changeChapter(1);
-                    setTimeout(() => toggleAudio(), 1000); 
-                }
-            };
-
-            currentUtterance.onerror = () => {
-                isSpeaking = false;
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-            };
-
-            synth.speak(currentUtterance);
-            isSpeaking = true;
-            btn.innerText = "⏸ Dừng";
-            btn.classList.add('audio-active');
-        }
-    }
-
-    function changeSpeed(val) {
-        currentSpeed = parseFloat(val);
-        if (isSpeaking) {
-            toggleAudio();
-            toggleAudio();
-        }
-    }
-
-    /* THUẬT TOÁN HẸN GIỜ SLEEP TIMER */
-    function startSleepTimer(minutes) {
-        const val = parseInt(minutes);
-        const countdownLabel = document.getElementById('timer-countdown');
-        clearTimeout(sleepTimeout);
-        clearInterval(countdownInterval);
-        countdownLabel.style.display = 'none';
-
-        if (val === 0) return;
-
-        let timeRemaining = val * 60; 
-        countdownLabel.style.display = 'inline';
-        
-        function updateCountdownDisplay() {
-            let mins = Math.floor(timeRemaining / 60);
-            let secs = timeRemaining % 60;
-            countdownLabel.innerText = `(${mins}:${secs < 10 ? '0' : ''}${secs})`;
-        }
-        updateCountdownDisplay();
-
-        countdownInterval = setInterval(() => {
-            timeRemaining--;
-            if (timeRemaining <= 0) {
-                clearInterval(countdownInterval);
-                countdownLabel.style.display = 'none';
-                document.getElementById('sleep-timer').value = "0";
-                if (isSpeaking) { toggleAudio(); }
-                alert("⏱ Đã hết giờ hẹn! Ứng dụng đã dừng đọc Audio.");
-            } else {
-                updateCountdownDisplay();
-            }
-        }, 1000);
-    }
-
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
-    }
-
-    /* ĐỌC FILE VÀ BÓC TÁCH CHƯƠNG */
-    async function loadStoryFile() {
-        try {
-            const response = await fetch(FILE_NAME);
-            if (!response.ok) {
-                throw new Error("Không tìm thấy file truyện hoặc lỗi đường truyền.");
-            }
-            const buffer = await response.arrayBuffer();
-            const decoder = new TextDecoder('utf-8');
-            const text = decoder.decode(buffer);
-            
-            const regex = /===\s*(.*?)\s*===/g;
-            let matches = [];
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    title: match[1].trim(),
-                    index: match.index,
-                    lastIndex: regex.lastIndex
-                });
-            }
-            
-            chapters = [];
-            if (matches.length === 0) {
-                chapters.push({ title: "Toàn bộ nội dung", content: text.trim() });
-            } else {
-                for (let i = 0; i < matches.length; i++) {
-                    let start = matches[i].lastIndex;
-                    let end = text.length;
-                    if (i + 1 < matches.length) {
-                        end = matches[i + 1].index;
-                    }
-                    let body = text.substring(start, end).trim();
-                    chapters.push({
-                        title: matches[i].title,
-                        content: body
-                    });
-                }
-            }
-            
-            const tocList = document.getElementById('toc-list');
-            tocList.innerHTML = "";
-            chapters.forEach((chap, index) => {
-                let li = document.createElement('li');
-                li.innerText = chap.title;
-                li.onclick = () => {
-                    jumpToChapter(index);
-                    toggleTOC();
-                };
-                tocList.appendChild(li);
-            });
-
-            const savedChapter = localStorage.getItem('current-chapter-index');
-<script>
-    // CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
+    // 1. CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
     const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
     let chapters = [];
@@ -568,7 +314,6 @@
             document.getElementById('theme-select').value = savedTheme;
         }
         
-        // Kích hoạt tính năng theo dõi cuộn màn hình để đẩy thanh tiến trình xanh lá
         window.onscroll = function() {
             let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -585,7 +330,6 @@
         localStorage.setItem('reader-size', currentSize);
     }
 
-    /* ĐỊNH DẠNG MÀU SẮC GIAO DIỆN KHỚP THANH CỐ ĐỊNH */
     function setReaderFont(fontFamily) {
         document.documentElement.style.setProperty('--font-reader', fontFamily);
         localStorage.setItem('reader-font', fontFamily);
@@ -634,8 +378,6 @@
             });
         }
     }
-
-    /* THUẬT TOÁN AUDIO GIỌNG NỮ TIẾNG VIỆT */
     function getVietnameseFemaleVoice() {
         if (!synth) return null;
         let voices = synth.getVoices();
@@ -700,7 +442,6 @@
         }
     }
 
-    /* THUẬT TOÁN HẸN GIỜ SLEEP TIMER */
     function startSleepTimer(minutes) {
         const val = parseInt(minutes);
         const countdownLabel = document.getElementById('timer-countdown');
@@ -738,7 +479,6 @@
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
 
-    /* ĐỌC FILE VÀ BÓC TÁCH CHƯƠNG */
     async function loadStoryFile() {
         try {
             const response = await fetch(FILE_NAME);
@@ -755,7 +495,7 @@
             
             while ((match = regex.exec(text)) !== null) {
                 matches.push({
-                    title: match[1].trim(),
+                    title: match.trim(),
                     index: match.index,
                     lastIndex: regex.lastIndex
                 });
@@ -792,273 +532,13 @@
             });
 
             const savedChapter = localStorage.getItem('current-chapter-index');
-<script>
-    // CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
-    const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
-
-    let chapters = [];
-    let currentChapterIndex = 0;
-    let currentSize = 18;
-    
-    let synth = window.speechSynthesis;
-    let currentUtterance = null;
-    let isSpeaking = false;
-    let currentSpeed = 1.0;
-    let sleepTimeout = null;
-    let countdownInterval = null;
-
-    function initSettings() {
-        const savedSize = localStorage.getItem('reader-size');
-        if (savedSize) {
-            currentSize = parseInt(savedSize);
-            document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
-        }
-        const savedFont = localStorage.getItem('reader-font');
-        if (savedFont) {
-            document.documentElement.style.setProperty('--font-reader', savedFont);
-            document.getElementById('font-select').value = savedFont;
-        }
-        const savedTheme = localStorage.getItem('reader-theme');
-        if (savedTheme) {
-            setReaderTheme(savedTheme);
-            document.getElementById('theme-select').value = savedTheme;
-        }
-        
-        // Kích hoạt tính năng theo dõi cuộn màn hình để đẩy thanh tiến trình xanh lá
-        window.onscroll = function() {
-            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
-            document.getElementById("progress-bar").style.width = scrolled + "%";
-        };
-    }
-
-    function changeFontSize(delta) {
-        currentSize += delta;
-        if (currentSize < 14) currentSize = 14;
-        if (currentSize > 32) currentSize = 32;
-        document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
-        localStorage.setItem('reader-size', currentSize);
-    }
-
-    /* ĐỊNH DẠNG MÀU SẮC GIAO DIỆN KHỚP THANH CỐ ĐỊNH */
-    function setReaderFont(fontFamily) {
-        document.documentElement.style.setProperty('--font-reader', fontFamily);
-        localStorage.setItem('reader-font', fontFamily);
-    }
-
-    function setReaderTheme(theme) {
-        const root = document.documentElement;
-        if (theme === 'kem') {
-            root.style.setProperty('--bg-body', '#f7f4eb');
-            root.style.setProperty('--bg-container', '#faf8f5');
-            root.style.setProperty('--text-color', '#2b2b2b');
-            root.style.setProperty('--border-color', '#eae6db');
-            root.style.setProperty('--btn-bg', '#2b2b2b');
-            root.style.setProperty('--btn-text', '#f7f4eb');
-        } else if (theme === 'vang') {
-            root.style.setProperty('--bg-body', '#f4ecd8');
-            root.style.setProperty('--bg-container', '#fdf6e3');
-            root.style.setProperty('--text-color', '#332a15');
-            root.style.setProperty('--border-color', '#e1d4b3');
-            root.style.setProperty('--btn-bg', '#332a15');
-            root.style.setProperty('--btn-text', '#fdf6e3');
-        } else if (theme === 'toi') {
-            root.style.setProperty('--bg-body', '#141414');
-            root.style.setProperty('--bg-container', '#1e1e1e');
-            root.style.setProperty('--text-color', '#b5b5b5');
-            root.style.setProperty('--border-color', '#2d2d2d');
-            root.style.setProperty('--btn-bg', '#b5b5b5');
-            root.style.setProperty('--btn-text', '#141414');
-        }
-        localStorage.setItem('reader-theme', theme);
-    }
-
-    function toggleTOC() {
-        const sidebar = document.getElementById('toc-sidebar');
-        const overlay = document.getElementById('overlay');
-        if (sidebar.style.display === 'flex') {
-            sidebar.style.display = 'none';
-            overlay.style.display = 'none';
-        } else {
-            sidebar.style.display = 'flex';
-            overlay.style.display = 'block';
-            const items = document.querySelectorAll('.toc-list li');
-            items.forEach((item, idx) => {
-                if (idx === currentChapterIndex) item.classList.add('active');
-                else item.classList.remove('active');
-            });
-        }
-    }
-
-    /* THUẬT TOÁN AUDIO GIỌNG NỮ TIẾNG VIỆT */
-    function getVietnameseFemaleVoice() {
-        if (!synth) return null;
-        let voices = synth.getVoices();
-        let femaleVoice = voices.find(voice => 
-            voice.lang.includes('vi') && 
-            (voice.name.toLowerCase().includes('female') || 
-             voice.name.toLowerCase().includes('google') || 
-             voice.name.toLowerCase().includes('hoaiami') || 
-             voice.name.toLowerCase().includes('an'))
-        );
-        if (!femaleVoice) {
-            femaleVoice = voices.find(voice => voice.lang.includes('vi'));
-        }
-        return femaleVoice;
-    }
-
-    function toggleAudio() {
-        const btn = document.getElementById('audio-btn');
-        if (isSpeaking) {
-            synth.cancel();
-            isSpeaking = false;
-            btn.innerText = "▶ Đọc";
-            btn.classList.remove('audio-active');
-        } else {
-            const textToRead = document.getElementById('chapter-content').innerText;
-            if (!textToRead) return;
-            synth.cancel();
-
-            currentUtterance = new SpeechSynthesisUtterance(textToRead);
-            const voice = getVietnameseFemaleVoice();
-            if (voice) currentUtterance.voice = voice;
-            currentUtterance.rate = currentSpeed;
-
-            currentUtterance.onend = () => {
-                isSpeaking = false;
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-                if (currentChapterIndex < chapters.length - 1) {
-                    changeChapter(1);
-                    setTimeout(() => toggleAudio(), 1000); 
-                }
-            };
-
-            currentUtterance.onerror = () => {
-                isSpeaking = false;
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-            };
-
-            synth.speak(currentUtterance);
-            isSpeaking = true;
-            btn.innerText = "⏸ Dừng";
-            btn.classList.add('audio-active');
-        }
-    }
-
-    function changeSpeed(val) {
-        currentSpeed = parseFloat(val);
-        if (isSpeaking) {
-            toggleAudio();
-            toggleAudio();
-        }
-    }
-
-    /* THUẬT TOÁN HẸN GIỜ SLEEP TIMER */
-    function startSleepTimer(minutes) {
-        const val = parseInt(minutes);
-        const countdownLabel = document.getElementById('timer-countdown');
-        clearTimeout(sleepTimeout);
-        clearInterval(countdownInterval);
-        countdownLabel.style.display = 'none';
-
-        if (val === 0) return;
-
-        let timeRemaining = val * 60; 
-        countdownLabel.style.display = 'inline';
-        
-        function updateCountdownDisplay() {
-            let mins = Math.floor(timeRemaining / 60);
-            let secs = timeRemaining % 60;
-            countdownLabel.innerText = `(${mins}:${secs < 10 ? '0' : ''}${secs})`;
-        }
-        updateCountdownDisplay();
-
-        countdownInterval = setInterval(() => {
-            timeRemaining--;
-            if (timeRemaining <= 0) {
-                clearInterval(countdownInterval);
-                countdownLabel.style.display = 'none';
-                document.getElementById('sleep-timer').value = "0";
-                if (isSpeaking) { toggleAudio(); }
-                alert("⏱ Đã hết giờ hẹn! Ứng dụng đã dừng đọc Audio.");
+            if (savedChapter && parseInt(savedChapter) < chapters.length) {
+                currentChapterIndex = parseInt(savedChapter);
             } else {
-                updateCountdownDisplay();
-            }
-        }, 1000);
-    }
-
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
-    }
-
-    /* ĐỌC FILE VÀ BÓC TÁCH CHƯƠNG */
-    async function loadStoryFile() {
-        try {
-            const response = await fetch(FILE_NAME);
-            if (!response.ok) {
-                throw new Error("Không tìm thấy file truyện hoặc lỗi đường truyền.");
-            }
-            const buffer = await response.arrayBuffer();
-            const decoder = new TextDecoder('utf-8');
-            const text = decoder.decode(buffer);
-            
-            const regex = /===\s*(.*?)\s*===/g;
-            let matches = [];
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    title: match[1].trim(),
-                    index: match.index,
-                    lastIndex: regex.lastIndex
-                });
+                currentChapterIndex = 0;
             }
             
-            chapters = [];
-            if (matches.length === 0) {
-                chapters.push({ title: "Toàn bộ nội dung", content: text.trim() });
-            } else {
-                for (let i = 0; i < matches.length; i++) {
-                    let start = matches[i].lastIndex;
-                    let end = text.length;
-                    if (i + 1 < matches.length) {
-                        end = matches[i + 1].index;
-                    }
-                    let body = text.substring(start, end).trim();
-                    chapters.push({
-                        title: matches[i].title,
-                        content: body
-                    });
-                }
-            }
-            
-            const tocList = document.getElementById('toc-list');
-            tocList.innerHTML = "";
-            chapters.forEach((chap, index) => {
-                let li = document.createElement('li');
-                li.innerText = chap.title;
-                li.onclick = () => {
-                    jumpToChapter(index);
-                    toggleTOC();
-                };
-                tocList.appendChild(li);
-            });
-
-                        // Khôi phục lại chương cũ đang đọc dở trước đó
-            const savedChapter = localStorage.getItem('current-chapter-index');
-            try {
-                if (savedChapter && parseInt(savedChapter) < chapters.length) {
-                    currentChapterIndex = parseInt(savedChapter);
-                } else {
-                    currentChapterIndex = 0;
-                }
-                renderChapter();
-            } catch (error) {
-                document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi:</span> ${error.message}`;
-            }
+            renderChapter();
         } catch (error) {
             document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi:</span> ${error.message}`;
         }
@@ -1106,4 +586,4 @@
 </body>
 </html>
 
-</html>
+
