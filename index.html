@@ -3,185 +3,396 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Đọc Truyện Cá Nhân</title>
-    <!-- Nhúng phông chữ Inter và Roboto cao cấp từ Google Fonts để đảm bảo hiển thị mượt mà -->
+    <title>Trang Đọc Truyện Cá Nhân Pro</title>
+    <!-- Nhúng các phông chữ phổ biến từ Google Fonts -->
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
-        /* ĐỊNH DẠNG THEO THÔNG SỐ ĐÃ CHỈ ĐỊNH */
+        /* THIẾT LẬP CÁC BIẾN MÀU NỀN TIÊU CHUẨN */
+        :root {
+            --bg-body: #f7f4eb;     /* Mặc định: Trắng kem */
+            --bg-container: #faf8f5;
+            --text-color: #2b2b2b;
+            --border-color: #eae6db;
+            --btn-bg: #2b2b2b;
+            --btn-text: #f7f4eb;
+            --font-reader: 'Inter', sans-serif;
+            --size-reader: 18px;
+        }
+
         body {
-            background-color: #f7f4eb; /* Nền trắng kem / vàng nhạt dịu mắt, chống lóa */
-            color: #2b2b2b; /* Màu chữ xám đậm tiêu chuẩn (không dùng màu đen tuyền gây mỏi mắt) */
-            font-family: 'Inter', 'Roboto', sans-serif; /* Phông chữ Sans-serif hiện đại, sắc nét */
-            font-size: 18px; /* Kích thước chữ tiêu chuẩn (từ 16px - 18px) */
-            line-height: 1.6; /* Khoảng cách dòng chuẩn 1.6 */
+            background-color: var(--bg-body);
+            color: var(--text-color);
+            font-family: var(--font-reader);
+            font-size: var(--size-reader);
+            line-height: 1.6;
             margin: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s, color 0.3s;
         }
-        .container {
-            max-width: 680px; /* Chiều rộng quét mắt tối ưu theo chiều ngang */
+
+        /* THANH CÔNG CỤ TÙY BIẾN (SETTINGS BAR) */
+        .toolbar {
+            max-width: 680px;
             width: 100%;
-            background-color: #faf8f5; /* Màu nền hộp truyện trắng kem nhẹ nhàng */
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-group select, .tool-group button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-body);
+            color: var(--text-color);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* KHỐI CHỨA TRUYỆN CHÍNH */
+        .container {
+            max-width: 680px;
+            width: 100%;
+            background-color: var(--bg-container);
             padding: 35px 30px;
             border-radius: 6px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Đổ bóng nhẹ sang trọng */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             box-sizing: border-box;
+            position: relative;
         }
+
         h1 {
-            font-family: 'Inter', sans-serif;
             font-size: 24px;
             font-weight: 700;
-            color: #1a1a1a; /* Màu tiêu đề đậm hơn để phân cấp nội dung */
             text-align: center;
             margin-top: 0;
             margin-bottom: 25px;
             line-height: 1.4;
             padding-bottom: 15px;
-            border-bottom: 2px solid #eae6db;
+            border-bottom: 2px solid var(--border-color);
         }
-        /* ĐỊNH DẠNG VĂN BẢN TRUYỆN */
+
         .content {
-            white-space: pre-wrap; /* Giữ nguyên định dạng xuống dòng từ file gốc .txt */
-            text-align: justify; /* Căn đều hai bên thẳng hàng thẳng lối giống trang sách */
+            white-space: pre-wrap;
+            text-align: justify;
             word-wrap: break-word;
-            letter-spacing: 0.1px; /* Khoảng cách ký tự tối ưu cho phông Sans-serif */
+            letter-spacing: 0.2px;
         }
+
+        /* GIAO DIỆN MỤC LỤC POPUP */
+        .toc-sidebar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 100%;
+            background-color: var(--bg-container);
+            border-right: 1px solid var(--border-color);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+            flex-direction: column;
+        }
+
+        .toc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .toc-list {
+            overflow-y: auto;
+            flex-grow: 1;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .toc-list li {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .toc-list li:hover, .toc-list li.active {
+            background-color: var(--bg-body);
+            font-weight: 600;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 999;
+        }
+
         /* KHỐI ĐIỀU HƯỚNG CHUYỂN CHƯƠNG */
         .navigation {
             display: flex;
             justify-content: space-between;
             margin-top: 45px;
             padding-top: 20px;
-            border-top: 2px solid #eae6db;
+            border-top: 2px solid var(--border-color);
         }
-        button {
-            background-color: #2b2b2b; /* Màu nút xám đậm đồng bộ với màu chữ */
-            color: #f7f4eb; /* Màu chữ trên nút là màu nền kem */
-            font-family: 'Inter', sans-serif;
+
+        .nav-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
             border: none;
             padding: 12px 24px;
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
             border-radius: 4px;
-            transition: background 0.2s, opacity 0.2s;
         }
-        button:hover {
-            background-color: #404040; /* Đổi màu nhẹ khi di chuột vào */
-        }
-        button:disabled {
-            background-color: #d1cbdc;
-            color: #a19a9a;
+
+        .nav-btn:disabled {
+            opacity: 0.4;
             cursor: not-allowed;
-            opacity: 0.6;
         }
-        /* Tối ưu hóa kích thước chữ hiển thị riêng cho màn hình điện thoại di động */
+
         @media (max-width: 600px) {
-            body { 
-                font-size: 16px; /* Chuyển về 16px trên mobile giúp bố cục cân đối hơn */
-                padding: 10px; 
-            }
+            body { padding: 10px; }
+            .toolbar { gap: 10px; padding: 10px; }
             .container { padding: 25px 15px; }
             h1 { font-size: 20px; }
-            button { padding: 10px 18px; font-size: 14px; }
+            .nav-btn { padding: 10px 16px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
+<!-- THANH CÔNG CỤ TÙY BIẾN -->
+<div class="toolbar">
+    <div class="tool-group">
+        <button onclick="toggleTOC()">☰ Mục Lục</button>
+    </div>
+    
+    <!-- Tăng giảm cỡ chữ -->
+    <div class="tool-group">
+        <span>Chữ:</span>
+        <button onclick="changeFontSize(-1)">A-</button>
+        <button onclick="changeFontSize(1)">A+</button>
+    </div>
+
+    <!-- Chọn Phông Chữ -->
+    <div class="tool-group">
+        <span>Phông:</span>
+        <select id="font-select" onchange="setReaderFont(this.value)">
+            <option value="'Inter', sans-serif">Inter (Không chân)</option>
+            <option value="'Roboto', sans-serif">Roboto (Không chân)</option>
+            <option value="'Lora', serif">Lora (Có chân mượt)</option>
+            <option value="'Playfair Display', serif">Playfair (Cổ điển)</option>
+        </select>
+    </div>
+
+    <!-- Chọn Màu Nền -->
+    <div class="tool-group">
+        <span>Giao diện:</span>
+        <select id="theme-select" onchange="setReaderTheme(this.value)">
+            <option value="kem">Trắng Kem</option>
+            <option value="vang">Vàng Nhạt</option>
+            <option value="toi">Đêm (Tối)</option>
+        </select>
+    </div>
+</div>
+
+<!-- NỀN ẨN VÀ DIỆN MỤC LỤC POPUP -->
+<div class="overlay" id="overlay" onclick="toggleTOC()"></div>
+<div class="toc-sidebar" id="toc-sidebar">
+    <div class="toc-header">
+        <h3 style="margin:0;">Danh Sách Chương</h3>
+        <button onclick="toggleTOC()">Đóng X</button>
+    </div>
+    <ul class="toc-list" id="toc-list"></ul>
+</div>
+
+<!-- KHUNG NỘI DUNG ĐỌC TRUYỆN -->
 <div class="container">
-    <h1 id="chapter-title">Đang kết nối dữ liệu...</h1>
+    <h1 id="chapter-title">Đang quét dữ liệu...</h1>
     <div class="content" id="chapter-content">Vui lòng chờ trong giây lát...</div>
     
     <div class="navigation">
-        <button id="prev-btn" onclick="changeChapter(-1)">« Chương Trước</button>
-        <button id="next-btn" onclick="changeChapter(1)">Chương Sau »</button>
+        <button id="prev-btn" class="nav-btn" onclick="changeChapter(-1)">« Chương Trước</button>
+        <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
     </div>
 </div>
 
 <script>
-    // CHÚ Ý: Đảm bảo điền đúng tên file truyện .txt của bạn ở đây
+    // Điền chính xác tên file .txt chứa nội dung truyện của bạn ở đây
     const FILE_NAME = "Bat_Dau_Danh_Dau_Hoang_Co_Thanh_The.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
+    let currentSize = 18;
 
-    async function loadStoryFile() {
-        try {
-            const response = await fetch(FILE_NAME);
-            
-            // Đọc file dưới dạng Buffer và giải mã UTF-8 để triệt tiêu lỗi lỗi font tiếng Việt
-            const buffer = await response.arrayBuffer();
-            const decoder = new TextDecoder('utf-8');
-            const text = decoder.decode(buffer);
-            
-            // Quét và bóc tách tiêu đề chương dựa vào định dạng "=== Tên Chương ===" từ tool cào
-            const regex = /===\s*(Chương\s+\d+.*?)\s*===/gi;
-            
-            let matches = [];
-            let match;
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    title: match[1].trim(),
-                    index: match.index,
-                    lastIndex: regex.lastIndex
-                });
-            }
-            
-            if (matches.length === 0) {
-                // Nếu file không có ký tự tách chương, hiển thị toàn bộ nội dung
-                chapters.push({ title: "Nội dung truyện", content: text.trim() });
-            } else {
-                for (let i = 0; i < matches.length; i++) {
-                    let start = matches[i].lastIndex;
-                    let end = (i + 1 < matches.length) ? matches[i + 1].index : text.length;
-                    let body = text.substring(start, end).trim();
-                    
-                    chapters.push({
-                        title: matches[i].title,
-                        content: body
-                    });
-                }
-            }
-            
-            if (chapters.length > 0) {
-                currentChapterIndex = 0;
-                renderChapter();
-            }
-        } catch (error) {
-            document.getElementById('chapter-content').innerText = "Không thể tải file dữ liệu truyện. Hãy chắc chắn rằng bạn đã đặt file .txt nằm cùng thư mục với file index.html. Chi tiết lỗi: " + error.message;
+    // 1. Quản lý trạng thái giao diện, cỡ chữ, phông chữ
+    function initSettings() {
+        const savedSize = localStorage.getItem('reader-size');
+        if (savedSize) {
+            currentSize = parseInt(savedSize);
+            document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
+        }
+        const savedFont = localStorage.getItem('reader-font');
+        if (savedFont) {
+            document.documentElement.style.setProperty('--font-reader', savedFont);
+            document.getElementById('font-select').value = savedFont;
+        }
+        const savedTheme = localStorage.getItem('reader-theme');
+        if (savedTheme) {
+            setReaderTheme(savedTheme);
+            document.getElementById('theme-select').value = savedTheme;
         }
     }
 
+    function changeFontSize(delta) {
+        currentSize += delta;
+        if (currentSize < 14) currentSize = 14;
+        if (currentSize > 32) currentSize = 32;
+        document.documentElement.style.setProperty('--size-reader', currentSize + 'px');
+        localStorage.setItem('reader-size', currentSize);
+    }
+
+    function setReaderFont(fontFamily) {
+        document.documentElement.style.setProperty('--font-reader', fontFamily);
+        localStorage.setItem('reader-font', fontFamily);
+    }
+
+    function setReaderTheme(theme) {
+        const root = document.documentElement;
+        if (theme === 'kem') {
+            root.style.setProperty('--bg-body', '#f7f4eb');
+            root.style.setProperty('--bg-container', '#faf8f5');
+            root.style.setProperty('--text-color', '#2b2b2b');
+            root.style.setProperty('--border-color', '#eae6db');
+        } else if (theme === 'vang') {
+            root.style.setProperty('--bg-body', '#f4ecd8');
+            root.style.setProperty('--bg-container', '#fdf6e3');
+            root.style.setProperty('--text-color', '#332a15');
+root.style.setProperty('--border-color', '#e1d4b3');
+        } else if (theme === 'toi') {
+            root.style.setProperty('--bg-body', '#141414');
+            root.style.setProperty('--bg-container', '#1e1e1e');
+            root.style.setProperty('--text-color', '#b5b5b5');
+            root.style.setProperty('--border-color', '#2d2d2d');
+        }
+        localStorage.setItem('reader-theme', theme);
+    }
+    // 2. Bật/Tắt Menu Mục Lục
+    function toggleTOC() {const sidebar = document.getElementById('toc-sidebar');
+                          const overlay = document.getElementById('overlay');
+                          if (sidebar.style.display === 'flex') {sidebar.style.display = 'none';overlay.style.display = 'none';
+                                                                } else {
+                              sidebar.style.display = 'flex';overlay.style.display = 'block';
+                              const items = document.querySelectorAll('.toc-list li');
+                              items.forEach((item, idx) => {
+                                  if (idx === currentChapterIndex) item.classList.add('active');
+                                  else item.classList.remove('active');
+                              });
+                          }
+                         }
+    // 3. Tải và bóc tách dữ liệu file .txt truyện chữ theo ký tự "===" bằng thuật toán mảng async function loadStoryFile() {
+    try {
+        const response = await fetch(FILE_NAME);
+        const buffer = await response.arrayBuffer();
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(buffer);
+        // Chia nhỏ nội dung file theo cụm từ "==="
+        const parts = text.split('===');chapters = [];
+        // Nếu mảng rỗng hoặc không chứa cấu trúc tách chương
+        if (parts.length < 3) {
+            chapters.push({ title: "Nội dung cuốn truyện", content: text.trim() });
+        } else {
+            // Thuật toán duyệt mảng thủ công: Cứ mỗi cặp giá trị sẽ là một Tiêu Đề và một Nội Dung
+            for (let i = 1; i < parts.length; i += 2) {
+                if (parts[i] && parts[i+1]) {chapters.push({title: parts[i].trim(),content: parts[i+1].trim()
+                                                           });
+                                            }
+            }
+        }
+        // Xây dựng danh sách chương đổ vào Menu mục lục
+        const tocList = document.getElementById('toc-list');
+        tocList.innerHTML = "";
+        chapters.forEach((chap, index) => {
+            let li = document.createElement('li');
+            li.innerText = chap.title;
+            li.onclick = () => {
+                jumpToChapter(index);
+                toggleTOC();
+            };
+            tocList.appendChild(li);
+        });
+        // Khôi phục lại chương cũ đang đọc dở trước đó
+        const savedChapter = localStorage.getItem('current-chapter-index');
+        if (savedChapter && parseInt(savedChapter) < chapters.length) {
+            currentChapterIndex = parseInt(savedChapter);
+        } else {
+            currentChapterIndex = 0;
+        }
+        renderChapter();
+    } catch (error) {
+        document.getElementById('chapter-content').innerText = "Không tìm thấy file truyện hoặc lỗi kết nối. Hãy đảm bảo file .txt nằm cùng thư mục với file index.html. Chi tiết: " + error.message;
+    }
+    }
+    // 4. Cơ chế hiển thị & Điều hướng chương truyện
     function renderChapter() {
         if (chapters.length === 0) return;
-        
         const chap = chapters[currentChapterIndex];
         document.getElementById('chapter-title').innerText = chap.title;
         document.getElementById('chapter-content').innerText = chap.content;
-        
-        // Điều khiển tắt/mở các nút bấm chuyển chương đầu/cuối
         document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);
         document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);
-        
-        // Cuộn mượt màn hình lên trên đầu trang khi chuyển sang chương mới
+        localStorage.setItem('current-chapter-index', currentChapterIndex);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
     function changeChapter(direction) {
-        currentChapterIndex += direction;
+        currentChapterIndex += direction; 
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
+                                           renderChapter();
+                                       }
+                                      }
+    function jumpToChapter(index) {
+        if (index >= 0 && index < chapters.length) {
+            currentChapterIndex = index;
             renderChapter();
         }
     }
-
-    window.onload = loadStoryFile;
+    window.onload = () => {
+        initSettings();
+        loadStoryFile();
+    };
 </script>
 
 </body>
