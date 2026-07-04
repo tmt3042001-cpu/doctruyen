@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Đọc Truyện Cá Nhân Pro</title>
+    <title>Trang Đọc Truyện Cá Nhân Pro + Audio</title>
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
     <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -66,6 +67,12 @@
             color: var(--text-color);
             font-weight: 600;
             cursor: pointer;
+        }
+
+        /* Giao diện nút Audio nổi bật */
+        .audio-active {
+            background-color: #e5a93b !important;
+            color: #1a1a1a !important;
         }
 
         .container {
@@ -191,6 +198,18 @@
     <div class="tool-group">
         <button onclick="toggleTOC()">☰ Mục Lục</button>
     </div>
+    
+    <!-- Bộ điều khiển Audio -->
+    <div class="tool-group">
+        <button id="audio-btn" onclick="toggleAudio()">▶ Đọc Truyện</button>
+        <select id="speed-select" onchange="changeSpeed(this.value)" style="padding: 5px;">
+            <option value="1.0" selected>Tốc độ: 1.0x</option>
+            <option value="1.1">Tốc độ: 1.1x</option>
+            <option value="1.2">Tốc độ: 1.2x</option>
+            <option value="1.3">Tốc độ: 1.3x</option>
+        </select>
+    </div>
+
     <div class="tool-group">
         <span>Chữ:</span>
         <button onclick="changeFontSize(-1)">A-</button>
@@ -234,12 +253,18 @@
     </div>
 </div>
 <script>
-    // CHÚ Ý: Đổi tên file .txt cho đúng với tên file truyện của bạn trên GitHub
+    // CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
     const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
     let currentSize = 18;
+    
+    // Khai báo biến xử lý âm thanh TTS
+    let synth = window.speechSynthesis;
+    let currentUtterance = null;
+    let isSpeaking = false;
+    let currentSpeed = 1.0;
 
     function initSettings() {
         const savedSize = localStorage.getItem('reader-size');
@@ -310,11 +335,95 @@
         }
     }
 
+    // THUẬT TOÁN ĐỌC GIỌNG NỮ TIẾNG VIỆT CHUYÊN NGHIỆP
+    function getVietnameseFemaleVoice() {
+        if (!synth) return null;
+        let voices = synth.getVoices();
+        
+        // Ưu tiên tìm giọng nữ chuẩn Việt Nam của Google hoặc Microsoft Cloud
+        let femaleVoice = voices.find(voice => 
+            voice.lang.includes('vi') && 
+            (voice.name.toLowerCase().includes('female') || 
+             voice.name.toLowerCase().includes('google') || 
+             voice.name.toLowerCase().includes('hoaiami') || 
+             voice.name.toLowerCase().includes('an'))
+        );
+        
+        // Nếu không có giọng nữ định danh sẵn, lấy bất kỳ giọng Tiếng Việt (vi-VN) nào có sẵn trên thiết bị
+        if (!femaleVoice) {
+            femaleVoice = voices.find(voice => voice.lang.includes('vi'));
+        }
+        return femaleVoice;
+    }
+
+    function toggleAudio() {
+        const btn = document.getElementById('audio-btn');
+        
+        if (isSpeaking) {
+            // Nếu đang đọc -> Bấm vào sẽ Tạm Dừng
+            synth.cancel();
+            isSpeaking = false;
+            btn.innerText = "▶ Đọc Tiếp";
+            btn.classList.remove('audio-active');
+        } else {
+            // Bắt đầu đọc nội dung truyện
+            const textToRead = document.getElementById('chapter-content').innerText;
+            if (!textToRead) return;
+
+            // Xóa lệnh cũ nếu có
+            synth.cancel();
+
+            // Cấu hình âm đọc
+            currentUtterance = new SpeechSynthesisUtterance(textToRead);
+            const voice = getVietnameseFemaleVoice();
+            if (voice) currentUtterance.voice = voice;
+            
+            currentUtterance.rate = currentSpeed; // Thiết lập tốc độ đọc
+
+            // Khi đọc hết chương truyện -> Tự động chuyển sang chương kế tiếp
+            currentUtterance.onend = () => {
+                isSpeaking = false;
+                btn.innerText = "▶ Đọc Truyện";
+                btn.classList.remove('audio-active');
+                // Nếu chưa phải chương cuối, tự động nhảy sang chương tiếp theo để đọc liên tục
+                if (currentChapterIndex < chapters.length - 1) {
+                    changeChapter(1);
+                    setTimeout(() => toggleAudio(), 1000); // Đợi 1 giây rồi đọc chương mới
+                }
+            };
+
+            currentUtterance.onerror = () => {
+                isSpeaking = false;
+                btn.innerText = "▶ Đọc Truyện";
+                btn.classList.remove('audio-active');
+            };
+
+            synth.speak(currentUtterance);
+            isSpeaking = true;
+            btn.innerText = "⏸ Tạm Dừng";
+            btn.classList.add('audio-active');
+        }
+    }
+
+    function changeSpeed(val) {
+        currentSpeed = parseFloat(val);
+        if (isSpeaking) {
+            // Nếu đang đọc mà đổi tốc độ, khởi động lại luồng đọc để áp dụng ngay
+            toggleAudio();
+            toggleAudio();
+        }
+    }
+
+    // Buộc trình duyệt tải danh sách giọng nói ngay khi mở trang web (Fix lỗi trên Chrome/Safari)
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
+    }
+
     async function loadStoryFile() {
         try {
             const response = await fetch(FILE_NAME);
             if (!response.ok) {
-                throw new Error("Không tìm thấy file truyện .txt hoặc lỗi đường truyền mạng.");
+                throw new Error("Không tìm thấy file truyện .txt hoặc lỗi kết nối.");
             }
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
@@ -371,13 +480,21 @@
             
             renderChapter();
         } catch (error) {
-            document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi hệ thống:</span> ${error.message}<br><br>Hãy mở file index.html sửa dòng số 4 của Phần 2 cho trùng khớp hoàn toàn với tên file truyện .txt của bạn trên GitHub.`;
+            document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi hệ thống:</span> ${error.message}`;
         }
     }
 
     function renderChapter() {
         if (chapters.length === 0) return;
         
+        // Nếu đang đổi chương, tắt tiếng chương cũ để tránh đè âm thanh
+        if (isSpeaking) {
+            synth.cancel();
+            isSpeaking = false;
+            document.getElementById('audio-btn').innerText = "▶ Đọc Truyện";
+            document.getElementById('audio-btn').classList.remove('audio-active');
+        }
+
         const chap = chapters[currentChapterIndex];
         document.getElementById('chapter-title').innerText = chap.title;
         document.getElementById('chapter-content').innerText = chap.content;
@@ -387,27 +504,8 @@
         
         localStorage.setItem('current-chapter-index', currentChapterIndex);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function changeChapter(direction) {
-        currentChapterIndex += direction;
-        if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
-            renderChapter();
-        }
-    }
-
-    function jumpToChapter(index) {
-        if (index >= 0 && index < chapters.length) {
-            currentChapterIndex = index;
-            renderChapter();
-        }
-    }
-
-    window.onload = () => {
-        initSettings();
-        loadStoryFile();
-    };
+}function changeChapter(direction) {currentChapterIndex += direction;if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {renderChapter();}}function jumpToChapter(index) {if (index >= 0 && index < chapters.length) {currentChapterIndex = index;renderChapter();}}window.onload = () => {initSettings();loadStoryFile();};
 </script>
+
 </body>
 </html>
- 
