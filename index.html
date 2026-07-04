@@ -618,7 +618,48 @@
         };
       
 }
-    function changeChapter(direction) {currentChapterIndex += direction;if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {renderChapter();}}function jumpToChapter(index) {if (index >= 0 && index < chapters.length) {currentChapterIndex = index;renderChapter();}}window.onload = () => {initSettings();loadStoryFile();};
+    function changeChapter(direction) {currentChapterIndex += direction;if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {renderChapter();
+                                                                                                                                               }
+                                      }
+    function jumpToChapter(index) {if (index >= 0 && index < chapters.length) {currentChapterIndex = index;renderChapter();
+                                                                              }
+                                  }
+        // --- TÍNH NĂNG 2: THAO TÁC CỬ CHỈ VUỐT MÀN HÌNH ---
+    let touchstartX = 0;
+    let touchendX = 0;
+    
+    // Khoảng cách vuốt tối thiểu (tính bằng pixel) để hệ thống nhận diện là hành vi lật trang
+    // Điều này tránh việc bạn vô tình làm chuyển chương khi đang cuộn màn hình lên xuống
+    const minSwipeDistance = 80; 
+
+    function checkSwipeDirection() {
+        // Vuốt từ phải sang trái (Sang chương mới)
+        if (touchstartX - touchendX > minSwipeDistance) {
+            // Kiểm tra xem nút "Chương Sau" có đang bị khóa (disabled) hay không trước khi nhảy
+            if (!document.getElementById('next-btn').disabled) {
+                changeChapter(1);
+            }
+        }
+        
+        // Vuốt từ trái sang phải (Về chương trước)
+        if (touchendX - touchstartX > minSwipeDistance) {
+            if (!document.getElementById('prev-btn').disabled) {
+                changeChapter(-1);
+            }
+        }
+    }
+
+    // Gắn bộ lắng nghe sự kiện vuốt vào toàn bộ màn hình trang web
+    document.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        checkSwipeDirection();
+    }, { passive: true });
+
+    window.onload = () => {initSettings();loadStoryFile();};
 </script>
 
 </body>
