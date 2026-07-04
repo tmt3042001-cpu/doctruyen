@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
     <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
-    <style>
+        <style>
         :root {
             --bg-body: #f7f4eb;     
             --bg-container: #faf8f5;
@@ -27,7 +27,7 @@
             font-size: var(--size-reader);
             line-height: 1.6;
             margin: 0;
-            padding: 80px 20px 80px 20px; /* Thêm khoảng trống trên/dưới để không bị che khuất bởi thanh tác vụ */
+            padding: 90px 20px 80px 20px; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -35,10 +35,10 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 1. TỐI ƯU: CỐ ĐỊNH THANH TÁC VỤ TRÊN CÙNG (STICKY TOOLBAR) */
+        /* 1. THANH TÁC VỤ ẨN HIỆN TRƯỢT MƯỢT MÀ */
         .toolbar {
             position: fixed;
-            top: 4px; /* Chừa 4px cho thanh tiến trình sát mép */
+            top: 4px; 
             left: 50%;
             transform: translateX(-50%);
             max-width: 680px;
@@ -55,7 +55,36 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
-            z-index: 999; /* Luôn nổi lên trên chữ truyện */
+            z-index: 999;
+            /* Thêm hiệu ứng trượt trơn tru kéo lên/xuống */
+            transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+
+        /* Khi trượt lên ẩn đi, thanh tác vụ sẽ nhô nhẹ 1 phần hoặc giấu hẳn tùy thuộc vào JavaScript */
+        .toolbar.hide-menu {
+            top: -140px; /* Đẩy hẳn phần thanh công cụ lên trên khung nhìn */
+        }
+
+        /* 2. THIẾT KẾ NÚT TAY NẮM CỬA (PULL TAB BUTTON) */
+        .pull-tab {
+            position: absolute;
+            bottom: -24px; /* Nằm nhô ra ngoài cạnh dưới của thanh tác vụ */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-color);
+            border-top: none; /* Khớp liền khối với thanh tác vụ */
+            padding: 3px 20px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 0 0 10px 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
         }
 
         .tool-group {
@@ -79,7 +108,6 @@
             color: #ffffff !important;
         }
 
-        /* KHUNG CHỨA VĂN BẢN TRUYỆN CHÍNH */
         .container {
             max-width: 680px;
             width: 100%;
@@ -108,7 +136,6 @@
             letter-spacing: 0.2px;
         }
 
-        /* 2. TỐI ƯU: NÚT ĐIỀU HƯỚNG CHUYỂN CHƯƠNG ẢO NẰM DƯỚI CÙNG MÀN HÌNH */
         .fixed-navigation {
             position: fixed;
             bottom: 0;
@@ -143,7 +170,6 @@
             cursor: not-allowed;
         }
 
-        /* MENU MỤC LỤC POPUP BÊN TRÁI MÀN HÌNH */
         .toc-sidebar {
             display: none;
             position: fixed;
@@ -200,8 +226,9 @@
         }
 
         @media (max-width: 600px) {
-            body { padding: 130px 10px 70px 10px; } /* Mobile cần rộng đầu hơn do thanh công cụ bị bẻ dòng */
+            body { padding: 130px 10px 70px 10px; } 
             .toolbar { gap: 6px; padding: 8px; border-radius: 0; }
+            .toolbar.hide-menu { top: -190px; } /* Màn hình nhỏ thanh menu bẻ dòng cao hơn */
             .container { padding: 25px 15px; }
             h1 { font-size: 20px; }
             .fixed-navigation { border-radius: 0; padding: 10px; }
@@ -211,13 +238,15 @@
 </head>
 <body>
 
-<!-- THANH TIẾN TRÌNH XANH LÁ CỐ ĐỊNH TRÊN CÙNG -->
 <div id="progress-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 4px; background-color: rgba(0,0,0,0.05); z-index: 10000;">
     <div id="progress-bar" style="width: 0%; height: 100%; background-color: #2ecc71; transition: width 0.1s ease;"></div>
 </div>
 
-<!-- THANH CÔNG CỤ CỐ ĐỊNH -->
-<div class="toolbar">
+<!-- THANH CÔNG CỤ CÓ NÚT TAY NẮM HÀN LIỀN KHỐI -->
+<div class="toolbar" id="main-toolbar">
+    <!-- NÚT TAY NẮM KÉO MÀN HÌNH -->
+    <div class="pull-tab" id="pull-tab" onclick="toggleToolbarManual()">▲</div>
+
     <div class="tool-group">
         <button onclick="toggleTOC()">☰ Mục Lục</button>
     </div>
@@ -261,7 +290,8 @@
     </div>
 </div>
 
-<div class="overlay" id="overlay" onclick="toggleTOC()"></div>
+  
+    <div class="overlay" id="overlay" onclick="toggleTOC()"></div>
 <div class="toc-sidebar" id="toc-sidebar">
     <div class="toc-header">
         <h3 style="margin:0;">Mục Lục</h3>
@@ -283,19 +313,9 @@
 </div>
 
 <script>
-    // 1. CHÚ Ý: Đổi tên file cho trùng khớp với file truyện thực tế của bạn trên GitHub
-    const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
-
-    let chapters = [];
-    let currentChapterIndex = 0;
-    let currentSize = 18;
-    
-    let synth = window.speechSynthesis;
-    let currentUtterance = null;
-    let isSpeaking = false;
-    let currentSpeed = 1.0;
-    let sleepTimeout = null;
-    let countdownInterval = null;
+        // Biến toàn cục theo dõi vị trí cuộn màn hình
+    let lastScrollTop = 0;
+    let isMenuManuallyClosed = false;
 
     function initSettings() {
         const savedSize = localStorage.getItem('reader-size');
@@ -319,7 +339,36 @@
             let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
             let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
             document.getElementById("progress-bar").style.width = scrolled + "%";
+            
+            let toolbar = document.getElementById('main-toolbar');
+            let tab = document.getElementById('pull-tab');
+            
+            if (!isMenuManuallyClosed) {
+                if (winScroll > lastScrollTop && winScroll > 150) {
+                    toolbar.classList.add('hide-menu');
+                    tab.innerText = "▼";
+                } else if (winScroll < lastScrollTop) {
+                    toolbar.classList.remove('hide-menu');
+                    tab.innerText = "▲";
+                }
+            }
+            lastScrollTop = winScroll <= 0 ? 0 : winScroll;
         };
+    }
+
+    function toggleToolbarManual() {
+        let toolbar = document.getElementById('main-toolbar');
+        let tab = document.getElementById('pull-tab');
+        
+        if (toolbar.classList.contains('hide-menu')) {
+            toolbar.classList.remove('hide-menu');
+            tab.innerText = "▲";
+            isMenuManuallyClosed = false;
+        } else {
+            toolbar.classList.add('hide-menu');
+            tab.innerText = "▼";
+            isMenuManuallyClosed = true;
+        }
     }
 
     function changeFontSize(delta) {
@@ -334,7 +383,6 @@
         document.documentElement.style.setProperty('--font-reader', fontFamily);
         localStorage.setItem('reader-font', fontFamily);
     }
-
     function setReaderTheme(theme) {
         const root = document.documentElement;
         if (theme === 'kem') {
@@ -378,7 +426,8 @@
             });
         }
     }
-        function getVietnameseFemaleVoice() {
+
+    function getVietnameseFemaleVoice() {
         if (!synth) return null;
         let voices = synth.getVoices();
         let femaleVoice = voices.find(voice => 
@@ -479,7 +528,6 @@
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
 
-    /* FIX LỖI: Thuật toán quét và nhận diện chuỗi tiêu đề chương chuẩn xác */
     async function loadStoryFile() {
         try {
             const response = await fetch(FILE_NAME);
@@ -496,7 +544,7 @@
             
             while ((match = regex.exec(text)) !== null) {
                 matches.push({
-                    title: match[1].trim(), // Lấy phần tử text trong ngoặc đơn và áp dụng lệnh loại bỏ khoảng trắng
+                    title: match[1].trim(),
                     index: match.index,
                     lastIndex: regex.lastIndex
                 });
@@ -584,6 +632,7 @@
         loadStoryFile();
     };
 </script>
+
 </body>
 </html>
 
