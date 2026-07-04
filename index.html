@@ -378,7 +378,7 @@
             });
         }
     }
-    function getVietnameseFemaleVoice() {
+        function getVietnameseFemaleVoice() {
         if (!synth) return null;
         let voices = synth.getVoices();
         let femaleVoice = voices.find(voice => 
@@ -479,6 +479,7 @@
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
 
+    /* FIX LỖI: Thuật toán quét và nhận diện chuỗi tiêu đề chương chuẩn xác */
     async function loadStoryFile() {
         try {
             const response = await fetch(FILE_NAME);
@@ -495,7 +496,7 @@
             
             while ((match = regex.exec(text)) !== null) {
                 matches.push({
-                    title: match.trim(),
+                    title: match[1].trim(), // Lấy phần tử text trong ngoặc đơn và áp dụng lệnh loại bỏ khoảng trắng
                     index: match.index,
                     lastIndex: regex.lastIndex
                 });
