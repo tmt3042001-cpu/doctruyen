@@ -35,7 +35,7 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 1. THANH TÁC VỤ ẨN HIỆN TRƯỢT MƯỢT MÀ */
+           /* THANH CHỨC NĂNG CỐ ĐỊNH PHẲNG (FIXED TOOLBAR) */
         .toolbar {
             position: fixed;
             top: 4px; 
@@ -56,189 +56,52 @@
             align-items: center;
             font-size: 14px;
             z-index: 999;
-            /* Thêm hiệu ứng trượt trơn tru kéo lên/xuống */
-            transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            /* Hiệu ứng trượt êm ái khi đóng mở */
+            transition: top 0.25s ease-out; 
         }
 
-        /* Khi trượt lên ẩn đi, thanh tác vụ sẽ nhô nhẹ 1 phần hoặc giấu hẳn tùy thuộc vào JavaScript */
+        /* ĐOẠN SỬA LỖI: Khi menu ẩn đi, chừa lại chính xác 24px chiều cao của Nút Tay Nắm lộ ra màn hình */
         .toolbar.hide-menu {
-            top: -140px; /* Đẩy hẳn phần thanh công cụ lên trên khung nhìn */
+            top: -65px; /* Giữ khoảng cách hoàn hảo để nút không bao giờ bị bay mất trên PC */
         }
 
-        /* 2. THIẾT KẾ NÚT TAY NẮM CỬA (PULL TAB BUTTON) */
+        /* THIẾT KẾ NÚT TAY NẮM CỬA LUÔN NỔI */
         .pull-tab {
             position: absolute;
-            bottom: -24px; /* Nằm nhô ra ngoài cạnh dưới của thanh tác vụ */
+            bottom: -22px; 
             left: 50%;
             transform: translateX(-50%);
             background-color: var(--bg-container);
             border: 1px solid var(--border-color);
-            border-top: none; /* Khớp liền khối với thanh tác vụ */
-            padding: 3px 20px;
+            border-top: none; 
+            padding: 2px 25px;
             font-size: 11px;
             font-weight: bold;
             border-radius: 0 0 10px 10px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05);
             color: var(--text-color);
             display: flex;
             align-items: center;
             justify-content: center;
             user-select: none;
-        }
-
-        .tool-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .tool-group select, .tool-group button {
-            padding: 6px 10px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-body);
-            color: var(--text-color);
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .audio-active {
-            background-color: #27ae60 !important;
-            color: #ffffff !important;
-        }
-
-        .container {
-            max-width: 680px;
-            width: 100%;
-            background-color: var(--bg-container);
-            padding: 35px 30px;
-            border-radius: 6px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            box-sizing: border-box;
-        }
-
-        h1 {
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 25px;
-            line-height: 1.4;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .content {
-            white-space: pre-wrap;
-            text-align: justify;
-            word-wrap: break-word;
-            letter-spacing: 0.2px;
-        }
-
-        .fixed-navigation {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: 680px;
-            width: 100%;
-            background-color: var(--bg-container);
-            border-top: 1px solid var(--border-color);
-            padding: 12px 20px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            z-index: 999;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
-            border-radius: 8px 8px 0 0;
-        }
-
-        .nav-btn {
-            background-color: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .nav-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .toc-sidebar {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 300px;
-            height: 100%;
-            background-color: var(--bg-container);
-            border-right: 1px solid var(--border-color);
-            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
             z-index: 1000;
-            padding: 20px;
-            box-sizing: border-box;
-            flex-direction: column;
         }
 
-        .toc-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .toc-list {
-            overflow-y: auto;
-            flex-grow: 1;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .toc-list li {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
-            font-size: 15px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .toc-list li:hover, .toc-list li.active {
-            background-color: var(--bg-body);
-            font-weight: 600;
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0; right: 0; bottom: 0; left: 0;
-            background-color: rgba(0,0,0,0.4);
-            z-index: 999;
-        }
-
-            @media (max-width: 600px) {
+        /* Tối ưu ẩn menu riêng cho màn hình điện thoại di động */
+        @media (max-width: 600px) {
             body { padding: 130px 10px 70px 10px; } 
             .toolbar { gap: 6px; padding: 8px; border-radius: 0; }
-            
-              /* KHI MENU ĐÓNG: Giấu phần nút bấm đi, giữ lại nút tay nắm lộ ra ngoài màn hình */
-        .toolbar.hide-menu {
-            top: -115px; /* Giảm độ cao đẩy lên để không bị mất nút */
-        }
-
-                 .container { padding: 25px 15px; }
+            /* Mobile menu có nhiều dòng cao hơn nên cần đẩy lên nhiều hơn, nhưng vẫn lộ nút */
+            .toolbar.hide-menu { 
+                top: -115px; 
+            } 
+            .container { padding: 25px 15px; }
             h1 { font-size: 20px; }
             .fixed-navigation { border-radius: 0; padding: 10px; }
             .nav-btn { padding: 8px 14px; font-size: 13px; }
         }
+
 
     </style>
 </head>
@@ -248,9 +111,9 @@
     <div id="progress-bar" style="width: 0%; height: 100%; background-color: #2ecc71; transition: width 0.1s ease;"></div>
 </div>
 
-<!-- THANH CÔNG CỤ CÓ NÚT TAY NẮM HÀN LIỀN KHỐI -->
+<!-- THANH CÔNG CỤ TÍCH HỢP NÚT TAY NẮM CHUẨN CẤU TRÚC -->
 <div class="toolbar" id="main-toolbar">
-    <!-- NÚT TAY NẮM KÉO MÀN HÌNH -->
+    <!-- Nút tay nắm cửa điều khiển thủ công -->
     <div class="pull-tab" id="pull-tab" onclick="toggleToolbarManual()">▲</div>
 
     <div class="tool-group">
@@ -282,7 +145,7 @@
     <div class="tool-group">
         <button onclick="changeFontSize(-1)">A-</button>
         <button onclick="changeFontSize(1)">A+</button>
-        <select id="font-select" onchange="setReaderFont(this.value)" style="max-width: 90px;">
+        <select id="font-select" onchange="setReaderFont(this.value)" style="max-width: 80px;">
             <option value="'Inter', sans-serif">Inter</option>
             <option value="'Roboto', sans-serif">Roboto</option>
             <option value="'Lora', serif">Lora</option>
@@ -295,6 +158,7 @@
         </select>
     </div>
 </div>
+
 
   
     <div class="overlay" id="overlay" onclick="toggleTOC()"></div>
