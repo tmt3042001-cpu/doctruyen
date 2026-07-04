@@ -1049,10 +1049,39 @@
             });
 
             const savedChapter = localStorage.getItem('current-chapter-index');
-if (savedChapter && parseInt(savedChapter) < chapters.length) {currentChapterIndex = parseInt(savedChapter);} else {currentChapterIndex = 0;}renderChapter();} catch (error) {document.getElementById('chapter-content').innerHTML = <span style="color:red; font-weight:bold;">Lỗi:</span> ${error.message};}}function renderChapter() {if (chapters.length === 0) return;if (isSpeaking) {synth.cancel();isSpeaking = false;
-                                                                                                                                                                              document.getElementById('audio-btn').innerText = "▶ Đọc";document.getElementById('audio-btn').classList.remove('audio-active');}const chap = chapters[currentChapterIndex];document.getElementById('chapter-title').innerText = chap.title;document.getElementById('chapter-content').innerText = chap.content;document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);localStorage.setItem('current-chapter-index', currentChapterIndex);
-        window.scrollTo({ top: 0, behavior: 'smooth' });}function changeChapter(direction) {currentChapterIndex += direction;if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {renderChapter();}}function jumpToChapter(index) {if (index >= 0 && index < chapters.length) {currentChapterIndex = index;renderChapter();}}window.onload = () => {initSettings();loadStoryFile();};
-            </script>
-
+if (savedChapter && parseInt(savedChapter) < chapters.length) {currentChapterIndex = parseInt(savedChapter);
+                                                              } 
+else {currentChapterIndex = 0;}renderChapter();
+        }
+        catch (error) {document.getElementById('chapter-content').innerHTML = <span style="color:red;
+            font-weight:bold;
+            ">Lỗi:</span> ${error.message};
+                }
+    }
+            function renderChapter() {
+                if (chapters.length === 0) return;
+                if (isSpeaking) {synth.cancel();isSpeaking = false;
+             document.getElementById('audio-btn').innerText = "▶ Đọc";
+            document.getElementById('audio-btn').classList.remove('audio-active');
+                                }
+                const chap = chapters[currentChapterIndex];
+                document.getElementById('chapter-title').innerText = chap.title;
+                document.getElementById('chapter-content').innerText = chap.content;
+                document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);
+                document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);
+                localStorage.setItem('current-chapter-index', currentChapterIndex);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            function changeChapter(direction) {currentChapterIndex += direction;
+        if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {renderChapter();
+                                                                               }
+                                              }
+            function jumpToChapter(index) {
+                if (index >= 0 && index < chapters.length) {currentChapterIndex = index;
+                                                            renderChapter();
+                                                           }
+            }
+            window.onload = () => {initSettings();loadStoryFile();};
+    </script>
 </body>
 </html>
