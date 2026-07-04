@@ -624,39 +624,54 @@
     function jumpToChapter(index) {if (index >= 0 && index < chapters.length) {currentChapterIndex = index;renderChapter();
                                                                               }
                                   }
-        // --- TÍNH NĂNG 2: THAO TÁC CỬ CHỈ VUỐT MÀN HÌNH ---
+    // --- TÍNH NĂNG 2: THAO TÁC CỬ CHỈ VUỐT MÀN HÌNH (BẢN SỬA LỖI CHUẨN) ---
     let touchstartX = 0;
+    let touchstartY = 0;
     let touchendX = 0;
+    let touchendY = 0;
     
-    // Khoảng cách vuốt tối thiểu (tính bằng pixel) để hệ thống nhận diện là hành vi lật trang
-    // Điều này tránh việc bạn vô tình làm chuyển chương khi đang cuộn màn hình lên xuống
-    const minSwipeDistance = 80; 
+    // Khoảng cách vuốt ngang tối thiểu (pixel) để kích hoạt lật trang
+    const minSwipeDistanceX = 70; 
+    // Giới hạn lệch dọc tối đa (pixel) để tránh việc đang cuộn trang lên xuống bị nhảy nhầm chương
+    const maxSwipeDistanceY = 40; 
 
     function checkSwipeDirection() {
-        // Vuốt từ phải sang trái (Sang chương mới)
-        if (touchstartX - touchendX > minSwipeDistance) {
-            // Kiểm tra xem nút "Chương Sau" có đang bị khóa (disabled) hay không trước khi nhảy
-            if (!document.getElementById('next-btn').disabled) {
-                changeChapter(1);
-            }
-        }
+        let distanceX = Math.abs(touchstartX - touchendX);
+        let distanceY = Math.abs(touchstartY - touchendY);
         
-        // Vuốt từ trái sang phải (Về chương trước)
-        if (touchendX - touchstartX > minSwipeDistance) {
-            if (!document.getElementById('prev-btn').disabled) {
-                changeChapter(-1);
+        // Chỉ xử lý nếu vuốt ngang dứt khoát và ít bị lệch theo chiều dọc
+        if (distanceX > minSwipeDistanceX && distanceY < maxSwipeDistanceY) {
+            if (touchstartX > touchendX) {
+                // Vuốt từ phải sang trái -> Sang chương sau
+                if (!document.getElementById('next-btn').disabled) {
+                    changeChapter(1);
+                }
+            } else {
+                // Vuốt từ trái sang phải -> Về chương trước
+                if (!document.getElementById('prev-btn').disabled) {
+                    changeChapter(-1);
+                }
             }
         }
     }
 
-    // Gắn bộ lắng nghe sự kiện vuốt vào toàn bộ màn hình trang web
+    // Ghi lại tọa độ ngay khi ngón tay vừa chạm vào màn hình
     document.addEventListener('touchstart', e => {
-        touchstartX = e.changedTouches[0].screenX;
+        touchstartX = e.touches[0].clientX;
+        touchstartY = e.touches[0].clientY;
     }, { passive: true });
 
+    // Liên tục cập nhật tọa độ khi ngón tay đang vuốt di chuyển trên màn hình
+    document.addEventListener('touchmove', e => {
+        touchendX = e.touches[0].clientX;
+        touchendY = e.touches[0].clientY;
+    }, { passive: true });
+
+    // Khi ngón tay rời khỏi màn hình thì tiến hành kiểm tra hướng vuốt
     document.addEventListener('touchend', e => {
-        touchendX = e.changedTouches[0].screenX;
         checkSwipeDirection();
+        // Reset lại tọa độ để chuẩn bị cho lần vuốt tiếp theo
+        touchstartX = 0; touchstartY = 0; touchendX = 0; touchendY = 0;
     }, { passive: true });
 
     window.onload = () => {initSettings();loadStoryFile();};
