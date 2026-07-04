@@ -225,15 +225,21 @@
             z-index: 999;
         }
 
-        @media (max-width: 600px) {
+            @media (max-width: 600px) {
             body { padding: 130px 10px 70px 10px; } 
             .toolbar { gap: 6px; padding: 8px; border-radius: 0; }
-            .toolbar.hide-menu { top: -190px; } /* Màn hình nhỏ thanh menu bẻ dòng cao hơn */
-            .container { padding: 25px 15px; }
+            
+              /* KHI MENU ĐÓNG: Giấu phần nút bấm đi, giữ lại nút tay nắm lộ ra ngoài màn hình */
+        .toolbar.hide-menu {
+            top: -115px; /* Giảm độ cao đẩy lên để không bị mất nút */
+        }
+
+                 .container { padding: 25px 15px; }
             h1 { font-size: 20px; }
             .fixed-navigation { border-radius: 0; padding: 10px; }
             .nav-btn { padding: 8px 14px; font-size: 13px; }
         }
+
     </style>
 </head>
 <body>
@@ -371,18 +377,21 @@
         };
     }
 
+       // ĐIỀU KHIỂN HỢP NHẤT ICON TAY NẮM CỬA
     function toggleToolbarManual() {
         let toolbar = document.getElementById('main-toolbar');
         let tab = document.getElementById('pull-tab');
         
         if (toolbar.classList.contains('hide-menu')) {
+            // Nếu đang đóng -> Kéo sập xuống mở ra
             toolbar.classList.remove('hide-menu');
-            tab.innerText = "▲";
-            isMenuManuallyClosed = false;
+            tab.innerText = "▲"; // Đổi thành mũi tên hướng lên để báo hiệu có thể đẩy lên đóng lại
+            isMenuManuallyClosed = false; 
         } else {
+            // Nếu đang mở -> Kéo đóng sập lên trên
             toolbar.classList.add('hide-menu');
-            tab.innerText = "▼";
-            isMenuManuallyClosed = true;
+            tab.innerText = "▼"; // Đổi thành mũi tên hướng xuống để báo hiệu có thể kéo xuống mở ra
+            isMenuManuallyClosed = true; 
         }
     }
 
