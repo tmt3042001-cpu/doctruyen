@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
     <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
-        <style>
+    <style>
         :root {
             --bg-body: #f7f4eb;     
             --bg-container: #faf8f5;
@@ -35,7 +35,7 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-           /* THANH CHỨC NĂNG CỐ ĐỊNH PHẲNG (FIXED TOOLBAR) */
+        /* THANH CHỨC NĂNG CỐ ĐỊNH PHẲNG (FIXED TOOLBAR) */
         .toolbar {
             position: fixed;
             top: 4px; 
@@ -56,13 +56,11 @@
             align-items: center;
             font-size: 14px;
             z-index: 999;
-            /* Hiệu ứng trượt êm ái khi đóng mở */
             transition: top 0.25s ease-out; 
         }
 
-        /* ĐOẠN SỬA LỖI: Khi menu ẩn đi, chừa lại chính xác 24px chiều cao của Nút Tay Nắm lộ ra màn hình */
         .toolbar.hide-menu {
-            top: -65px; /* Giữ khoảng cách hoàn hảo để nút không bao giờ bị bay mất trên PC */
+            top: -65px; 
         }
 
         /* THIẾT KẾ NÚT TAY NẮM CỬA LUÔN NỔI */
@@ -88,22 +86,9 @@
             z-index: 1000;
         }
 
-        /* Tối ưu ẩn menu riêng cho màn hình điện thoại di động */
-        @media (max-width: 600px) {
-            body { padding: 130px 10px 70px 10px; } 
-            .toolbar { gap: 6px; padding: 8px; border-radius: 0; }
-            /* Mobile menu có nhiều dòng cao hơn nên cần đẩy lên nhiều hơn, nhưng vẫn lộ nút */
-            .toolbar.hide-menu { 
-                top: -115px; 
-            } 
-            .container { padding: 25px 15px; }
-            h1 { font-size: 20px; }
-            .fixed-navigation { border-radius: 0; padding: 10px; }
-            .nav-btn { padding: 8px 14px; font-size: 13px; }
-        }
         /* KHẮC PHỤC LỖI BUNG MỤC LỤC: ẨN VÀ ĐƯA MỤC LỤC VỀ SIDEBAR BÊN TRÁI */
         .toc-sidebar {
-            display: none; /* Bắt buộc ẩn đi khi mới vào trang */
+            display: none; 
             position: fixed;
             top: 0; 
             left: 0;
@@ -112,15 +97,22 @@
             background-color: var(--bg-container);
             border-right: 1px solid var(--border-color);
             box-shadow: 4px 0 15px rgba(0,0,0,0.15);
-            z-index: 1001; /* Luôn nổi lên trên cùng màn hình */
+            z-index: 1001; 
             padding: 20px;
             box-sizing: border-box;
             flex-direction: column;
         }
 
-        /* Lớp nền mờ màu đen để ẩn nội dung truyện phía sau khi mở mục lục */
+        .toc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
         .overlay {
-            display: none; /* Bắt buộc ẩn đi khi mới vào trang */
+            display: none; 
             position: fixed;
             top: 0; 
             left: 0; 
@@ -130,7 +122,6 @@
             z-index: 1000;
         }
 
-        /* Định dạng danh sách chương chữ gọn gàng hơn */
         .toc-list {
             overflow-y: auto;
             flex-grow: 1;
@@ -155,7 +146,103 @@
             font-weight: 600;
         }
 
+        /* NỘI DUNG TRUYỆN CHỮ */
+        .container {
+            max-width: 680px;
+            width: 100%;
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-color);
+            padding: 40px 30px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            margin-bottom: 40px;
+        }
 
+        h1 {
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            text-align: justify;
+        }
+
+        /* THANH ĐIỀU HƯỚNG CỐ ĐỊNH Ở ĐÁY MÀN HÌNH */
+        .fixed-navigation {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 680px;
+            width: 100%;
+            background-color: var(--bg-container);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            z-index: 998;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .nav-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tool-group button, .tool-group select, .toc-header button {
+            background-color: var(--bg-body);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .audio-active {
+            background-color: #2ecc71 !important;
+            color: #fff !important;
+            border-color: #27ae60 !important;
+        }
+
+        /* Tối ưu ẩn menu riêng cho màn hình điện thoại di động */
+        @media (max-width: 600px) {
+            body { padding: 130px 10px 70px 10px; } 
+            .toolbar { gap: 6px; padding: 8px; border-radius: 0; }
+            .toolbar.hide-menu { 
+                top: -115px; 
+            } 
+            .container { padding: 25px 15px; }
+            h1 { font-size: 20px; }
+            .fixed-navigation { border-radius: 0; padding: 10px; }
+            .nav-btn { padding: 8px 14px; font-size: 13px; }
+        }
     </style>
 </head>
 <body>
@@ -164,9 +251,7 @@
     <div id="progress-bar" style="width: 0%; height: 100%; background-color: #2ecc71; transition: width 0.1s ease;"></div>
 </div>
 
-<!-- THANH CÔNG CỤ TÍCH HỢP NÚT TAY NẮM CHUẨN CẤU TRÚC -->
 <div class="toolbar" id="main-toolbar">
-    <!-- Nút tay nắm cửa điều khiển thủ công -->
     <div class="pull-tab" id="pull-tab" onclick="toggleToolbarManual()">▲</div>
 
     <div class="tool-group">
@@ -212,9 +297,7 @@
     </div>
 </div>
 
-
-  
-    <div class="overlay" id="overlay" onclick="toggleTOC()"></div>
+<div class="overlay" id="overlay" onclick="toggleTOC()"></div>
 <div class="toc-sidebar" id="toc-sidebar">
     <div class="toc-header">
         <h3 style="margin:0;">Mục Lục</h3>
@@ -223,27 +306,23 @@
     <ul class="toc-list" id="toc-list"></ul>
 </div>
 
-<!-- NỘI DUNG TRUYỆN CHỮ -->
 <div class="container">
     <h1 id="chapter-title">Đang quét dữ liệu...</h1>
     <div class="content" id="chapter-content">Vui lòng chờ trong giây lát...</div>
 </div>
 
-<!-- THANH ĐIỀU HƯỚNG ẢO CỐ ĐỊNH Ở ĐÁY MÀN HÌNH -->
 <div class="fixed-navigation">
     <button id="prev-btn" class="nav-btn" onclick="changeChapter(-1)">« Chương Trước</button>
     <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
 </div>
 
 <script>
-      // Đảm bảo điền đúng tên file truyện .txt của bạn trên GitHub ở đây
     const FILE_NAME = "Hoang_Co_Thanh_The_Phan_1.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
     let currentSize = 18;
     
-    // ĐOẠN SỬA LỖI: Khai báo lại luồng xử lý Audio
     let synth = window.speechSynthesis;
     let currentUtterance = null;
     let isSpeaking = false;
@@ -251,7 +330,6 @@
     let sleepTimeout = null;
     let countdownInterval = null;
 
-        // Biến toàn cục theo dõi vị trí cuộn màn hình
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
 
@@ -264,24 +342,27 @@
         const savedFont = localStorage.getItem('reader-font');
         if (savedFont) {
             document.documentElement.style.setProperty('--font-reader', savedFont);
-            document.getElementById('font-select').value = savedFont;
+            const fs = document.getElementById('font-select');
+            if (fs) fs.value = savedFont;
         }
         const savedTheme = localStorage.getItem('reader-theme');
         if (savedTheme) {
             setReaderTheme(savedTheme);
-            document.getElementById('theme-select').value = savedTheme;
+            const ts = document.getElementById('theme-select');
+            if (ts) ts.value = savedTheme;
         }
         
         window.onscroll = function() {
             let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
             let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
-            document.getElementById("progress-bar").style.width = scrolled + "%";
+            const pb = document.getElementById("progress-bar");
+            if (pb) pb.style.width = scrolled + "%";
             
             let toolbar = document.getElementById('main-toolbar');
             let tab = document.getElementById('pull-tab');
             
-            if (!isMenuManuallyClosed) {
+            if (toolbar && tab && !isMenuManuallyClosed) {
                 if (winScroll > lastScrollTop && winScroll > 150) {
                     toolbar.classList.add('hide-menu');
                     tab.innerText = "▼";
@@ -294,20 +375,18 @@
         };
     }
 
-       // ĐIỀU KHIỂN HỢP NHẤT ICON TAY NẮM CỬA
     function toggleToolbarManual() {
         let toolbar = document.getElementById('main-toolbar');
         let tab = document.getElementById('pull-tab');
+        if (!toolbar || !tab) return;
         
         if (toolbar.classList.contains('hide-menu')) {
-            // Nếu đang đóng -> Kéo sập xuống mở ra
             toolbar.classList.remove('hide-menu');
-            tab.innerText = "▲"; // Đổi thành mũi tên hướng lên để báo hiệu có thể đẩy lên đóng lại
+            tab.innerText = "▲";
             isMenuManuallyClosed = false; 
         } else {
-            // Nếu đang mở -> Kéo đóng sập lên trên
             toolbar.classList.add('hide-menu');
-            tab.innerText = "▼"; // Đổi thành mũi tên hướng xuống để báo hiệu có thể kéo xuống mở ra
+            tab.innerText = "▼";
             isMenuManuallyClosed = true; 
         }
     }
@@ -324,6 +403,7 @@
         document.documentElement.style.setProperty('--font-reader', fontFamily);
         localStorage.setItem('reader-font', fontFamily);
     }
+
     function setReaderTheme(theme) {
         const root = document.documentElement;
         if (theme === 'kem') {
@@ -354,6 +434,8 @@
     function toggleTOC() {
         const sidebar = document.getElementById('toc-sidebar');
         const overlay = document.getElementById('overlay');
+        if (!sidebar || !overlay) return;
+
         if (sidebar.style.display === 'flex') {
             sidebar.style.display = 'none';
             overlay.style.display = 'none';
@@ -386,13 +468,17 @@
 
     function toggleAudio() {
         const btn = document.getElementById('audio-btn');
+        if (!btn) return;
+
         if (isSpeaking) {
             synth.cancel();
             isSpeaking = false;
             btn.innerText = "▶ Đọc";
             btn.classList.remove('audio-active');
         } else {
-            const textToRead = document.getElementById('chapter-content').innerText;
+            const contentElem = document.getElementById('chapter-content');
+            if (!contentElem) return;
+            const textToRead = contentElem.innerText;
             if (!textToRead) return;
             synth.cancel();
 
@@ -400,6 +486,19 @@
             const voice = getVietnameseFemaleVoice();
             if (voice) currentUtterance.voice = voice;
             currentUtterance.rate = currentSpeed;
+
+            // Tính năng phụ: Cuộn màn hình tự động theo tiến độ đọc truyện chữ
+            currentUtterance.onboundary = (event) => {
+                if (event.name === 'word') {
+                    let totalChars = textToRead.length;
+                    let currentCharIndex = event.charIndex;
+                    let ratio = currentCharIndex / totalChars;
+                    let scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    if(scrollHeight > 0) {
+                        window.scrollTo({ top: scrollHeight * ratio, behavior: 'smooth' });
+                    }
+                }
+            };
 
             currentUtterance.onend = () => {
                 isSpeaking = false;
@@ -435,6 +534,8 @@
     function startSleepTimer(minutes) {
         const val = parseInt(minutes);
         const countdownLabel = document.getElementById('timer-countdown');
+        if (!countdownLabel) return;
+        
         clearTimeout(sleepTimeout);
         clearInterval(countdownInterval);
         countdownLabel.style.display = 'none';
@@ -473,7 +574,7 @@
         try {
             const response = await fetch(FILE_NAME);
             if (!response.ok) {
-                throw new Error("Không tìm thấy file truyện hoặc lỗi đường truyền.");
+                throw new Error(`Không tìm thấy file "${FILE_NAME}" trên GitHub. Vui lòng kiểm tra lại tên file.`);
             }
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
@@ -510,16 +611,18 @@
             }
             
             const tocList = document.getElementById('toc-list');
-            tocList.innerHTML = "";
-            chapters.forEach((chap, index) => {
-                let li = document.createElement('li');
-                li.innerText = chap.title;
-                li.onclick = () => {
-                    jumpToChapter(index);
-                    toggleTOC();
-                };
-                tocList.appendChild(li);
-            });
+            if (tocList) {
+                tocList.innerHTML = "";
+                chapters.forEach((chap, index) => {
+                    let li = document.createElement('li');
+                    li.innerText = chap.title;
+                    li.onclick = () => {
+                        jumpToChapter(index);
+                        toggleTOC();
+                    };
+                    tocList.appendChild(li);
+                });
+            }
 
             const savedChapter = localStorage.getItem('current-chapter-index');
             if (savedChapter && parseInt(savedChapter) < chapters.length) {
@@ -530,7 +633,12 @@
             
             renderChapter();
         } catch (error) {
-            document.getElementById('chapter-content').innerHTML = `<span style="color:red; font-weight:bold;">Lỗi:</span> ${error.message}`;
+            const contentElem = document.getElementById('chapter-content');
+            if (contentElem) {
+                contentElem.innerHTML = `<div style="color:#ff4d4d; padding:20px; text-align:center; font-weight:bold;">⚠️ LỖI TẢI TRUYỆN:<br>${error.message}</div>`;
+            }
+            const titleElem = document.getElementById('chapter-title');
+            if (titleElem) titleElem.innerText = "Lỗi hệ thống";
         }
     }
 
@@ -539,16 +647,25 @@
         if (isSpeaking) {
             synth.cancel();
             isSpeaking = false;
-            document.getElementById('audio-btn').innerText = "▶ Đọc";
-            document.getElementById('audio-btn').classList.remove('audio-active');
+            const btn = document.getElementById('audio-btn');
+            if (btn) {
+                btn.innerText = "▶ Đọc";
+                btn.classList.remove('audio-active');
+            }
         }
 
         const chap = chapters[currentChapterIndex];
-        document.getElementById('chapter-title').innerText = chap.title;
-        document.getElementById('chapter-content').innerText = chap.content;
+        const titleElem = document.getElementById('chapter-title');
+        const contentElem = document.getElementById('chapter-content');
         
-        document.getElementById('prev-btn').disabled = (currentChapterIndex === 0);
-        document.getElementById('next-btn').disabled = (currentChapterIndex === chapters.length - 1);
+        if (titleElem) titleElem.innerText = chap.title;
+        if (contentElem) contentElem.innerText = chap.content;
+        
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        
+        if (prevBtn) prevBtn.disabled = (currentChapterIndex === 0);
+        if (nextBtn) nextBtn.disabled = (currentChapterIndex === chapters.length - 1);
         
         localStorage.setItem('current-chapter-index', currentChapterIndex);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -573,8 +690,5 @@
         loadStoryFile();
     };
 </script>
-
 </body>
 </html>
-
-
