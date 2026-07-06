@@ -353,36 +353,26 @@
         }
         
         window.onscroll = function() {
-    let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-    let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-    let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
-    const pb = document.getElementById("progress-bar");
-    if (pb) pb.style.width = scrolled + "%";
-    
-    let toolbar = document.getElementById('main-toolbar');
-    let tab = document.getElementById('pull-tab');
-    
-    // ĐOẠN ĐIỀU CHỈNH: Nếu đang bật Audio (isSpeaking === true), bỏ qua toàn bộ logic tự động ẩn menu
-    if (isSpeaking) {
-        if (toolbar && toolbar.classList.contains('hide-menu')) {
-            toolbar.classList.remove('hide-menu');
-            if (tab) tab.innerText = "▲";
-        }
-        lastScrollTop = winScroll <= 0 ? 0 : winScroll;
-        return; // Thoát hàm luôn, không cho ẩn menu
-    }
-    
-    if (toolbar && tab && !isMenuManuallyClosed) {
-        if (winScroll > lastScrollTop && winScroll > 150) {
-            toolbar.classList.add('hide-menu');
-            tab.innerText = "▼";
-        } else if (winScroll < lastScrollTop) {
-            toolbar.classList.remove('hide-menu');
-            tab.innerText = "▲";
-        }
-    }
-    lastScrollTop = winScroll <= 0 ? 0 : winScroll;
-};
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (height > 0) ? (winScroll / height) * 100 : 0;
+            const pb = document.getElementById("progress-bar");
+            if (pb) pb.style.width = scrolled + "%";
+            
+            let toolbar = document.getElementById('main-toolbar');
+            let tab = document.getElementById('pull-tab');
+            
+            if (toolbar && tab && !isMenuManuallyClosed) {
+                if (winScroll > lastScrollTop && winScroll > 150) {
+                    toolbar.classList.add('hide-menu');
+                    tab.innerText = "▼";
+                } else if (winScroll < lastScrollTop) {
+                    toolbar.classList.remove('hide-menu');
+                    tab.innerText = "▲";
+                }
+            }
+            lastScrollTop = winScroll <= 0 ? 0 : winScroll;
+        };
     }
 
     function toggleToolbarManual() {
