@@ -332,9 +332,38 @@
 
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
-    
-    // === BỔ SUNG: Biến theo dõi vị trí chữ đang đọc đến đâu ===
     let currentReadIndex = 0;
+
+    // === VŨ KHÍ 1: TẠO LUỒNG ÂM THANH CÂM GIỮ NHỊP NỀN (KEEP-ALIVE) ===
+    // Đoạn mã Base64 dưới đây là một file âm thanh WAV rỗng dài 1 giây
+    const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+    silentAudio.loop = true; // Cho phép phát lặp lại vô tận
+
+    function startBackgroundKeepAlive() {
+        // Kích hoạt luồng ngầm để ngăn OS đóng băng trình duyệt khi tắt màn hình
+        silentAudio.play().catch(() => {});
+    }
+
+    function stopBackgroundKeepAlive() {
+        silentAudio.pause();
+    }
+
+    // === VŨ KHÍ 2: TÍCH HỢP ĐIỀU KHIỂN LÊN MÀN HÌNH KHÓA & TAI NGHE BLUETOOTH ===
+    function setupMediaSession(title) {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: title,
+                artist: 'Thuận Đọc Truyện (Audio AI)',
+                album: 'Con Đường Bá Chủ'
+            });
+
+            // Gán các nút bấm trên màn hình khóa vào hàm điều khiển của app
+            navigator.mediaSession.setActionHandler('play', () => { if (!isSpeaking) toggleAudio(); });
+            navigator.mediaSession.setActionHandler('pause', () => { if (isSpeaking) toggleAudio(); });
+            navigator.mediaSession.setActionHandler('previoustrack', () => { changeChapter(-1); });
+            navigator.mediaSession.setActionHandler('nexttrack', () => { changeChapter(1); });
+        }
+    }
 
     function initSettings() {
         const savedSize = localStorage.getItem('reader-size');
@@ -469,7 +498,6 @@
         return femaleVoice;
     }
 
-    // === NÂNG CẤP HÀM ĐỌC AUDIO CHỐNG LẶP LẠI ===
     function toggleAudio() {
         const btn = document.getElementById('audio-btn');
         if (!btn) return;
@@ -477,9 +505,10 @@
         if (isSpeaking) {
             synth.cancel();
             isSpeaking = false;
+            stopBackgroundKeepAlive(); // Tắt luồng ngầm khi bấm Dừng
             btn.innerText = "▶ Đọc";
             btn.classList.remove('audio-active');
-            // Khi bấm dừng, vị trí hiện tại đã được tự động lưu vào localStorage nhờ sự kiện onboundary
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         } else {
             const contentElem = document.getElementById('chapter-content');
             if (!contentElem) return;
@@ -487,12 +516,10 @@
             const fullText = contentElem.innerText;
             if (!fullText) return;
             
-            // Nếu vị trí lưu vượt quá độ dài bài (hoặc lỗi), reset về đầu chương
             if (currentReadIndex >= fullText.length) currentReadIndex = 0;
 
-            // CẮT BỎ PHẦN ĐÃ NGHE: Chỉ bốc văn bản từ vị trí đang nghe dở trở về sau
             const textToRead = fullText.substring(currentReadIndex);
-            const startOffset = currentReadIndex; // Lưu mốc bắt đầu của lần nói này
+            const startOffset = currentReadIndex; 
 
             synth.cancel();
 
@@ -501,17 +528,12 @@
             if (voice) currentUtterance.voice = voice;
             currentUtterance.rate = currentSpeed;
 
-            // Tính năng cuộn + Lưu tiến độ real-time theo từng từ được phát ra
             currentUtterance.onboundary = (event) => {
                 if (event.name === 'word' || event.name === 'sentence') {
                     let totalChars = fullText.length;
-                    // Cộng dồn mốc bắt đầu với vị trí chữ trong đoạn đang phát
                     currentReadIndex = startOffset + event.charIndex;
-                    
-                    // LƯU VÀO BỘ NHỚ TRÌNH DUYỆT (Giúp tắt app mở lại không bị quên)
                     localStorage.setItem('audio-progress-' + currentChapterIndex, currentReadIndex);
 
-                    // Cuộn màn hình mượt mà theo mốc mới
                     let ratio = currentReadIndex / totalChars;
                     let scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
                     if(scrollHeight > 0) {
@@ -525,21 +547,34 @@
                 btn.innerText = "▶ Đọc";
                 btn.classList.remove('audio-active');
                 
-                // Đọc xong chương thì xóa bộ nhớ vị trí của chương này, reset về 0
                 currentReadIndex = 0;
                 localStorage.removeItem('audio-progress-' + currentChapterIndex);
 
+                // Nhờ có luồng Silent Audio giữ nhịp, đoạn timeout này sẽ luôn được kích hoạt ngay cả khi tắt màn hình!
                 if (currentChapterIndex < chapters.length - 1) {
                     changeChapter(1);
-                    setTimeout(() => toggleAudio(), 1000); 
+                    setTimeout(() => {
+                        toggleAudio();
+                    }, 1000); 
+                } else {
+                    stopBackgroundKeepAlive(); // Hết truyện mới tắt luồng ngầm
                 }
             };
 
             currentUtterance.onerror = () => {
                 isSpeaking = false;
+                stopBackgroundKeepAlive();
                 btn.innerText = "▶ Đọc";
                 btn.classList.remove('audio-active');
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
             };
+
+            // Kích hoạt luồng câm Keep-Alive và cập nhật màn hình khóa
+            startBackgroundKeepAlive();
+            if (chapters[currentChapterIndex]) {
+                setupMediaSession(chapters[currentChapterIndex].title);
+            }
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 
             synth.speak(currentUtterance);
             isSpeaking = true;
@@ -550,7 +585,6 @@
 
     function changeSpeed(val) {
         currentSpeed = parseFloat(val);
-        // Nhờ cơ chế lưu vị trí mới, thay đổi tốc độ sẽ phát tiếp TRƠN TRU ngay tại câu đang đọc mà không lặp lại từ đầu!
         if (isSpeaking) {
             toggleAudio();
             toggleAudio();
@@ -673,6 +707,7 @@
         if (isSpeaking) {
             synth.cancel();
             isSpeaking = false;
+            stopBackgroundKeepAlive();
             const btn = document.getElementById('audio-btn');
             if (btn) {
                 btn.innerText = "▶ Đọc";
@@ -687,7 +722,9 @@
         if (titleElem) titleElem.innerText = chap.title;
         if (contentElem) contentElem.innerText = chap.content;
         
-        // === BỔ SUNG: Nạp lại vị trí đã nghe dở của chương này từ bộ nhớ ===
+        // Cập nhật thông tin chương mới lên màn hình khóa ngay lập tức
+        setupMediaSession(chap.title);
+        
         const savedProgress = localStorage.getItem('audio-progress-' + currentChapterIndex);
         currentReadIndex = savedProgress ? parseInt(savedProgress) : 0;
         
@@ -697,10 +734,8 @@
         if (prevBtn) prevBtn.disabled = (currentChapterIndex === 0);
         if (nextBtn) nextBtn.disabled = (currentChapterIndex === chapters.length - 1);
         
-        localStorage.getItem('current-chapter-index');
         localStorage.setItem('current-chapter-index', currentChapterIndex);
         
-        // Nếu có vị trí nghe dở, tự động cuộn màn hình tới đúng đoạn đó cho người dùng nhìn thấy
         if (currentReadIndex > 0 && chap.content.length > 0) {
             setTimeout(() => {
                 let ratio = currentReadIndex / chap.content.length;
@@ -718,12 +753,15 @@
         currentChapterIndex += direction;
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
             renderChapter();
+            // Nếu bấm Next/Prev từ màn hình khóa khi đang phát -> tự động đọc luôn chương mới
+            if (isSpeaking) {
+                setTimeout(() => toggleAudio(), 500);
+            }
         }
     }
 
     function jumpToChapter(index) {
         if (index === currentChapterIndex) {
-            // MẸO UX: Nếu bấm lại vào ĐÚNG chương đang đọc trong mục lục -> Xóa vị trí cũ, cho phép đọc lại từ đầu chương!
             currentReadIndex = 0;
             localStorage.removeItem('audio-progress-' + currentChapterIndex);
         }
