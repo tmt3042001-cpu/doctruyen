@@ -253,7 +253,15 @@
 
 <div class="toolbar" id="main-toolbar">
     <div class="pull-tab" id="pull-tab" onclick="toggleToolbarManual()">▲</div>
-
+<!-- Nút chọn file ẩn và Nút bấm kích hoạt -->
+<input type="file" id="offline-file-input" accept=".txt" style="display: none;" onchange="loadOfflineStory(this)">
+<button class="tool-btn" onclick="document.getElementById('offline-file-input').click()" title="Mở file truyện từ máy">
+    📂 Mở truyện Offline
+</button>
+<!-- (Tùy chọn) Nút quay lại truyện mặc định -->
+<button class="tool-btn" id="reset-default-btn" onclick="resetToDefaultStory()" style="display: none;" title="Đọc lại truyện mặc định của web">
+    🔄 Truyện gốc
+</button>
     <div class="tool-group">
         <button onclick="toggleTOC()">☰ Mục Lục</button>
     </div>
@@ -315,7 +323,6 @@
     <button id="prev-btn" class="nav-btn" onclick="changeChapter(-1)">« Chương Trước</button>
     <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
 </div>
-
 <script>
     const FILE_NAME = "Con_Duong_Ba_Chu_Phan_1.txt";
 
@@ -332,15 +339,17 @@
 
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
-    let currentReadIndex = 0;
+
+    // === CÁC BIẾN QUẢN LÝ BĂM NHỎ VĂN BẢN (CHUNKING ENGINE) ===
+    let sentenceArray = [];
+    let currentSentenceIndex = 0;
+    let isUserStopping = false;
 
     // === VŨ KHÍ 1: TẠO LUỒNG ÂM THANH CÂM GIỮ NHỊP NỀN (KEEP-ALIVE) ===
-    // Đoạn mã Base64 dưới đây là một file âm thanh WAV rỗng dài 1 giây
     const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-    silentAudio.loop = true; // Cho phép phát lặp lại vô tận
+    silentAudio.loop = true;
 
     function startBackgroundKeepAlive() {
-        // Kích hoạt luồng ngầm để ngăn OS đóng băng trình duyệt khi tắt màn hình
         silentAudio.play().catch(() => {});
     }
 
@@ -348,16 +357,15 @@
         silentAudio.pause();
     }
 
-    // === VŨ KHÍ 2: TÍCH HỢP ĐIỀU KHIỂN LÊN MÀN HÌNH KHÓA & TAI NGHE BLUETOOTH ===
+    // === VŨ KHÍ 2: TÍCH HỢP ĐIỀU KHIỂN LÊN MÀN HÌNH KHÓA ===
     function setupMediaSession(title) {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: title,
                 artist: 'Thuận Đọc Truyện (Audio AI)',
-                album: 'Con Đường Bá Chủ'
+                album: localStorage.getItem('offline-story-name') || 'Con Đường Bá Chủ'
             });
 
-            // Gán các nút bấm trên màn hình khóa vào hàm điều khiển của app
             navigator.mediaSession.setActionHandler('play', () => { if (!isSpeaking) toggleAudio(); });
             navigator.mediaSession.setActionHandler('pause', () => { if (isSpeaking) toggleAudio(); });
             navigator.mediaSession.setActionHandler('previoustrack', () => { changeChapter(-1); });
@@ -498,96 +506,135 @@
         return femaleVoice;
     }
 
+    // === THUẬT TOÁN BĂM NHỎ VĂN BẢN (CHUNKING) CHỐNG TRÀN BỘ NHỚ ===
+    function chunkText(text) {
+        let raw = text.replace(/([.?!;\n]+)/g, "$1|").split("|");
+        let chunks = [];
+        let temp = "";
+        for (let i = 0; i < raw.length; i++) {
+            let part = raw[i].trim();
+            if (!part) continue;
+            
+            if (part.length >= 180) {
+                if (temp) { chunks.push(temp); temp = ""; }
+                let subParts = part.match(/.{1,160}(?:[,\\s]|$)/g) || [part];
+                subParts.forEach(sp => { if (sp.trim()) chunks.push(sp.trim()); });
+                continue;
+            }
+
+            if ((temp + " " + part).length < 180) {
+                temp = (temp ? temp + " " : "") + part;
+            } else {
+                if (temp) chunks.push(temp);
+                temp = part;
+            }
+        }
+        if (temp) chunks.push(temp);
+        return chunks;
+    }
+
+    // === HỆ THỐNG ĐỌC NỐI TIẾP TỪNG CÂU ===
+    function playNextSentence() {
+        if (!isSpeaking) return;
+        
+        if (currentSentenceIndex >= sentenceArray.length) {
+            isSpeaking = false;
+            currentSentenceIndex = 0;
+            localStorage.removeItem('audio-progress-' + currentChapterIndex);
+            
+            const btn = document.getElementById('audio-btn');
+            if (btn) {
+                btn.innerText = "▶ Đọc";
+                btn.classList.remove('audio-active');
+            }
+            
+            if (currentChapterIndex < chapters.length - 1) {
+                changeChapter(1);
+                setTimeout(() => toggleAudio(), 1000); 
+            } else {
+                stopBackgroundKeepAlive();
+            }
+            return;
+        }
+
+        let textToSpeak = sentenceArray[currentSentenceIndex];
+        currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+        const voice = getVietnameseFemaleVoice();
+        if (voice) currentUtterance.voice = voice;
+        currentUtterance.rate = currentSpeed;
+
+        currentUtterance.onend = () => {
+            if (isUserStopping) return; 
+            
+            currentSentenceIndex++;
+            localStorage.setItem('audio-progress-' + currentChapterIndex, currentSentenceIndex);
+            
+            let ratio = currentSentenceIndex / sentenceArray.length;
+            let scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            if (scrollHeight > 0) {
+                window.scrollTo({ top: scrollHeight * ratio, behavior: 'smooth' });
+            }
+            
+            playNextSentence();
+        };
+
+        currentUtterance.onerror = (e) => {
+            if (isUserStopping || e.error === 'interrupted' || e.error === 'canceled') return;
+            currentSentenceIndex++;
+            playNextSentence();
+        };
+
+        synth.speak(currentUtterance);
+    }
+
     function toggleAudio() {
         const btn = document.getElementById('audio-btn');
         if (!btn) return;
 
         if (isSpeaking) {
+            isUserStopping = true;
             synth.cancel();
             isSpeaking = false;
-            stopBackgroundKeepAlive(); // Tắt luồng ngầm khi bấm Dừng
+            stopBackgroundKeepAlive();
             btn.innerText = "▶ Đọc";
             btn.classList.remove('audio-active');
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         } else {
             const contentElem = document.getElementById('chapter-content');
             if (!contentElem) return;
-            
             const fullText = contentElem.innerText;
             if (!fullText) return;
+
+            sentenceArray = chunkText(fullText);
             
-            if (currentReadIndex >= fullText.length) currentReadIndex = 0;
+            const savedProgress = localStorage.getItem('audio-progress-' + currentChapterIndex);
+            currentSentenceIndex = savedProgress ? parseInt(savedProgress) : 0;
+            if (currentSentenceIndex >= sentenceArray.length) currentSentenceIndex = 0;
 
-            const textToRead = fullText.substring(currentReadIndex);
-            const startOffset = currentReadIndex; 
+            isSpeaking = true;
+            isUserStopping = false;
+            btn.innerText = "⏸ Dừng";
+            btn.classList.add('audio-active');
 
-            synth.cancel();
-
-            currentUtterance = new SpeechSynthesisUtterance(textToRead);
-            const voice = getVietnameseFemaleVoice();
-            if (voice) currentUtterance.voice = voice;
-            currentUtterance.rate = currentSpeed;
-
-            currentUtterance.onboundary = (event) => {
-                if (event.name === 'word' || event.name === 'sentence') {
-                    let totalChars = fullText.length;
-                    currentReadIndex = startOffset + event.charIndex;
-                    localStorage.setItem('audio-progress-' + currentChapterIndex, currentReadIndex);
-
-                    let ratio = currentReadIndex / totalChars;
-                    let scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-                    if(scrollHeight > 0) {
-                        window.scrollTo({ top: scrollHeight * ratio, behavior: 'smooth' });
-                    }
-                }
-            };
-
-            currentUtterance.onend = () => {
-                isSpeaking = false;
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-                
-                currentReadIndex = 0;
-                localStorage.removeItem('audio-progress-' + currentChapterIndex);
-
-                // Nhờ có luồng Silent Audio giữ nhịp, đoạn timeout này sẽ luôn được kích hoạt ngay cả khi tắt màn hình!
-                if (currentChapterIndex < chapters.length - 1) {
-                    changeChapter(1);
-                    setTimeout(() => {
-                        toggleAudio();
-                    }, 1000); 
-                } else {
-                    stopBackgroundKeepAlive(); // Hết truyện mới tắt luồng ngầm
-                }
-            };
-
-            currentUtterance.onerror = () => {
-                isSpeaking = false;
-                stopBackgroundKeepAlive();
-                btn.innerText = "▶ Đọc";
-                btn.classList.remove('audio-active');
-                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-            };
-
-            // Kích hoạt luồng câm Keep-Alive và cập nhật màn hình khóa
             startBackgroundKeepAlive();
             if (chapters[currentChapterIndex]) {
                 setupMediaSession(chapters[currentChapterIndex].title);
             }
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 
-            synth.speak(currentUtterance);
-            isSpeaking = true;
-            btn.innerText = "⏸ Dừng";
-            btn.classList.add('audio-active');
+            playNextSentence();
         }
     }
 
     function changeSpeed(val) {
         currentSpeed = parseFloat(val);
         if (isSpeaking) {
-            toggleAudio();
-            toggleAudio();
+            isUserStopping = true;
+            synth.cancel();
+            setTimeout(() => {
+                isUserStopping = false;
+                playNextSentence();
+            }, 150);
         }
     }
 
@@ -630,81 +677,140 @@
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
 
+    // === HỆ THỐNG XỬ LÝ VĂN BẢN CHUNG (CHO CẢ ONLINE & OFFLINE) ===
+    function parseStoryText(text, isOffline = false, customTitle = null) {
+        const regex = /===\s*(.*?)\s*===/g;
+        let matches = [];
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+            matches.push({
+                title: match[1].trim(),
+                index: match.index,
+                lastIndex: regex.lastIndex
+            });
+        }
+        
+        chapters = [];
+        if (matches.length === 0) {
+            let titleName = customTitle ? customTitle.replace('.txt', '') : "Toàn bộ nội dung";
+            chapters.push({ title: titleName, content: text.trim() });
+        } else {
+            for (let i = 0; i < matches.length; i++) {
+                let start = matches[i].lastIndex;
+                let end = text.length;
+                if (i + 1 < matches.length) {
+                    end = matches[i + 1].index;
+                }
+                let body = text.substring(start, end).trim();
+                chapters.push({
+                    title: matches[i].title,
+                    content: body
+                });
+            }
+        }
+        
+        const tocList = document.getElementById('toc-list');
+        if (tocList) {
+            tocList.innerHTML = "";
+            chapters.forEach((chap, index) => {
+                let li = document.createElement('li');
+                li.innerText = chap.title;
+                li.onclick = () => {
+                    jumpToChapter(index);
+                    toggleTOC();
+                };
+                tocList.appendChild(li);
+            });
+        }
+
+        const savedChapter = localStorage.getItem('current-chapter-index');
+        if (savedChapter && parseInt(savedChapter) < chapters.length && !isOffline) {
+            currentChapterIndex = parseInt(savedChapter);
+        } else {
+            currentChapterIndex = 0;
+        }
+        
+        renderChapter();
+    }
+
+    // === TÍNH NĂNG ĐỌC TRUYỆN OFFLINE (FILEREADER API) ===
+    function loadOfflineStory(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (isSpeaking) toggleAudio(); // Tắt âm thanh bài cũ nếu đang đọc
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            
+            // Lưu truyện vào bộ nhớ điện thoại để lần sau mở app không cần tải lại
+            localStorage.setItem('offline-story-content', text);
+            localStorage.setItem('offline-story-name', file.name);
+            localStorage.removeItem('current-chapter-index'); // Reset về chương 1 cho truyện mới
+            
+            // Hiện nút quay lại truyện mặc định
+            const resetBtn = document.getElementById('reset-default-btn');
+            if (resetBtn) resetBtn.style.display = 'inline-block';
+
+            parseStoryText(text, true, file.name);
+            alert("🎉 Đã tải và lưu truyện Offline: " + file.name + "\n(Từ giờ bạn có thể tắt mạng mở app đọc thoải mái!)");
+        };
+        reader.readAsText(file, "UTF-8");
+    }
+
+    // === NÚT QUAY LẠI TRUYỆN MẶC ĐỊNH ===
+    function resetToDefaultStory() {
+        if (isSpeaking) toggleAudio();
+        localStorage.removeItem('offline-story-content');
+        localStorage.removeItem('offline-story-name');
+        localStorage.removeItem('current-chapter-index');
+        
+        const resetBtn = document.getElementById('reset-default-btn');
+        if (resetBtn) resetBtn.style.display = 'none';
+        
+        loadStoryFile();
+    }
+
+    // === TẢI TRUYỆN KHI MỞ APP ===
     async function loadStoryFile() {
+        // Kiểm tra xem trước đó người dùng có đang đọc truyện Offline không
+        const savedOfflineContent = localStorage.getItem('offline-story-content');
+        const savedOfflineName = localStorage.getItem('offline-story-name');
+        
+        if (savedOfflineContent) {
+            const resetBtn = document.getElementById('reset-default-btn');
+            if (resetBtn) resetBtn.style.display = 'inline-block';
+            
+            parseStoryText(savedOfflineContent, false, savedOfflineName);
+            return;
+        }
+
         try {
             const response = await fetch(FILE_NAME);
             if (!response.ok) {
-                throw new Error(`Không tìm thấy file "${FILE_NAME}" trên GitHub. Vui lòng kiểm tra lại tên file.`);
+                throw new Error(`Không tìm thấy file "${FILE_NAME}" trên server.`);
             }
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
             const text = decoder.decode(buffer);
             
-            const regex = /===\s*(.*?)\s*===/g;
-            let matches = [];
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                matches.push({
-                    title: match[1].trim(),
-                    index: match.index,
-                    lastIndex: regex.lastIndex
-                });
-            }
-            
-            chapters = [];
-            if (matches.length === 0) {
-                chapters.push({ title: "Toàn bộ nội dung", content: text.trim() });
-            } else {
-                for (let i = 0; i < matches.length; i++) {
-                    let start = matches[i].lastIndex;
-                    let end = text.length;
-                    if (i + 1 < matches.length) {
-                        end = matches[i + 1].index;
-                    }
-                    let body = text.substring(start, end).trim();
-                    chapters.push({
-                        title: matches[i].title,
-                        content: body
-                    });
-                }
-            }
-            
-            const tocList = document.getElementById('toc-list');
-            if (tocList) {
-                tocList.innerHTML = "";
-                chapters.forEach((chap, index) => {
-                    let li = document.createElement('li');
-                    li.innerText = chap.title;
-                    li.onclick = () => {
-                        jumpToChapter(index);
-                        toggleTOC();
-                    };
-                    tocList.appendChild(li);
-                });
-            }
-
-            const savedChapter = localStorage.getItem('current-chapter-index');
-            if (savedChapter && parseInt(savedChapter) < chapters.length) {
-                currentChapterIndex = parseInt(savedChapter);
-            } else {
-                currentChapterIndex = 0;
-            }
-            
-            renderChapter();
+            parseStoryText(text);
         } catch (error) {
             const contentElem = document.getElementById('chapter-content');
             if (contentElem) {
-                contentElem.innerHTML = `<div style="color:#ff4d4d; padding:20px; text-align:center; font-weight:bold;">⚠️ LỖI TẢI TRUYỆN:<br>${error.message}</div>`;
+                contentElem.innerHTML = `<div style="color:#ff4d4d; padding:20px; text-align:center; font-weight:bold;">⚠️ LỖI TẢI TRUYỆN:<br>${error.message}<br><br>💡 Bạn hãy bấm nút "📂 Mở truyện Offline" để chọn file .txt từ điện thoại nhé!</div>`;
             }
             const titleElem = document.getElementById('chapter-title');
-            if (titleElem) titleElem.innerText = "Lỗi hệ thống";
+            if (titleElem) titleElem.innerText = "Chưa có nội dung";
         }
     }
 
     function renderChapter() {
         if (chapters.length === 0) return;
         if (isSpeaking) {
+            isUserStopping = true;
             synth.cancel();
             isSpeaking = false;
             stopBackgroundKeepAlive();
@@ -722,11 +828,11 @@
         if (titleElem) titleElem.innerText = chap.title;
         if (contentElem) contentElem.innerText = chap.content;
         
-        // Cập nhật thông tin chương mới lên màn hình khóa ngay lập tức
         setupMediaSession(chap.title);
         
+        sentenceArray = chunkText(chap.content);
         const savedProgress = localStorage.getItem('audio-progress-' + currentChapterIndex);
-        currentReadIndex = savedProgress ? parseInt(savedProgress) : 0;
+        currentSentenceIndex = savedProgress ? parseInt(savedProgress) : 0;
         
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
@@ -736,9 +842,9 @@
         
         localStorage.setItem('current-chapter-index', currentChapterIndex);
         
-        if (currentReadIndex > 0 && chap.content.length > 0) {
+        if (currentSentenceIndex > 0 && sentenceArray.length > 0) {
             setTimeout(() => {
-                let ratio = currentReadIndex / chap.content.length;
+                let ratio = currentSentenceIndex / sentenceArray.length;
                 let scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
                 if (scrollHeight > 0) {
                     window.scrollTo({ top: scrollHeight * ratio, behavior: 'smooth' });
@@ -752,17 +858,17 @@
     function changeChapter(direction) {
         currentChapterIndex += direction;
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
+            let wasSpeaking = isSpeaking;
             renderChapter();
-            // Nếu bấm Next/Prev từ màn hình khóa khi đang phát -> tự động đọc luôn chương mới
-            if (isSpeaking) {
-                setTimeout(() => toggleAudio(), 500);
+            if (wasSpeaking) {
+                setTimeout(() => toggleAudio(), 300);
             }
         }
     }
 
     function jumpToChapter(index) {
         if (index === currentChapterIndex) {
-            currentReadIndex = 0;
+            currentSentenceIndex = 0;
             localStorage.removeItem('audio-progress-' + currentChapterIndex);
         }
         if (index >= 0 && index < chapters.length) {
