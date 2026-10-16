@@ -324,7 +324,7 @@
     <button id="next-btn" class="nav-btn" onclick="changeChapter(1)">Chương Sau »</button>
 </div>
 <script>
-    const FILE_NAME = "Di The Ma Hoang_Phan_1.txt";
+    const FILE_NAME = "Con_Duong_Ba_Chu_Phan_10.txt";
 
     let chapters = [];
     let currentChapterIndex = 0;
@@ -344,17 +344,26 @@
     let currentSentenceIndex = 0;
     let isUserStopping = false;
 
+    // === TẠO LUỒNG ÂM THANH CÂM ĐỂ GIỮ AIRPODS / MEDIA SESSION LUÔN SỐNG ===
     const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
     silentAudio.loop = true;
 
     function startBackgroundKeepAlive() {
-        silentAudio.play().catch(() => {});
+        silentAudio.play().then(() => {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'playing';
+            }
+        }).catch(() => {});
     }
 
     function stopBackgroundKeepAlive() {
         silentAudio.pause();
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'paused';
+        }
     }
 
+    // === CÀI ĐẶT ĐIỀU KHIỂN BẰNG AIRPODS / TAI NGHE BLUETOOTH ===
     function setupMediaSession(title) {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -363,10 +372,26 @@
                 album: localStorage.getItem('offline-story-name') || 'Con Đường Bá Chủ'
             });
 
-            navigator.mediaSession.setActionHandler('play', () => { if (!isSpeaking) toggleAudio(); });
-            navigator.mediaSession.setActionHandler('pause', () => { if (isSpeaking) toggleAudio(); });
-            navigator.mediaSession.setActionHandler('previoustrack', () => { changeChapter(-1); });
-            navigator.mediaSession.setActionHandler('nexttrack', () => { changeChapter(1); });
+            // Lắng nghe sự kiện bấm nút trên AirPods / Màn hình khóa
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (!isSpeaking) {
+                    toggleAudio();
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                if (isSpeaking) {
+                    toggleAudio();
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                changeChapter(-1);
+            });
+
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                changeChapter(1);
+            });
         }
     }
 
@@ -545,7 +570,6 @@
             
             if (currentChapterIndex < chapters.length - 1) {
                 changeChapter(1);
-                // Đợi một chút rồi kích hoạt lại để lách cơ chế chặn tự động của iOS Safari
                 setTimeout(() => {
                     if (currentChapterIndex < chapters.length) {
                         toggleAudio();
@@ -598,7 +622,6 @@
             stopBackgroundKeepAlive();
             btn.innerText = "▶ Đọc";
             btn.classList.remove('audio-active');
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         } else {
             synth.cancel();
 
@@ -618,11 +641,12 @@
             btn.innerText = "⏸ Dừng";
             btn.classList.add('audio-active');
 
+            // Bắt đầu phát file âm thanh câm để chiếm giữ Audio Focus trên iOS
             startBackgroundKeepAlive();
+            
             if (chapters[currentChapterIndex]) {
                 setupMediaSession(chapters[currentChapterIndex].title);
             }
-            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 
             setTimeout(() => {
                 if (isSpeaking) playNextSentence();
@@ -755,7 +779,7 @@
             if (resetBtn) resetBtn.style.display = 'inline-block';
 
             parseStoryText(text, true, file.name);
-            alert("🎉 Đã tải và lưu truyện Offline: " + file.name + "\n(Từ giờ bạn có thể tắt mạng mở app đọc thoải mái!)");
+            alert("🎉 Đã tải và lưu truyện Offline: " + file.name);
         };
         reader.readAsText(file, "UTF-8");
     }
