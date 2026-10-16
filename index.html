@@ -340,12 +340,10 @@
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
 
-    // === CÁC BIẾN QUẢN LÝ BĂM NHỎ VĂN BẢN (CHUNKING ENGINE) ===
     let sentenceArray = [];
     let currentSentenceIndex = 0;
     let isUserStopping = false;
 
-    // === VŨ KHÍ 1: TẠO LUỒNG ÂM THANH CÂM GIỮ NHỊP NỀN (KEEP-ALIVE) ===
     const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
     silentAudio.loop = true;
 
@@ -357,7 +355,6 @@
         silentAudio.pause();
     }
 
-    // === VŨ KHÍ 2: TÍCH HỢP ĐIỀU KHIỂN LÊN MÀN HÌNH KHÓA ===
     function setupMediaSession(title) {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -506,7 +503,6 @@
         return femaleVoice;
     }
 
-    // === THUẬT TOÁN BĂM NHỎ VĂN BẢN (CHUNKING) CHỐNG TRÀN BỘ NHỚ ===
     function chunkText(text) {
         let raw = text.replace(/([.?!;\n]+)/g, "$1|").split("|");
         let chunks = [];
@@ -533,7 +529,6 @@
         return chunks;
     }
 
-    // === HỆ THỐNG ĐỌC NỐI TIẾP TỪNG CÂU ===
     function playNextSentence() {
         if (!isSpeaking) return;
         
@@ -550,7 +545,12 @@
             
             if (currentChapterIndex < chapters.length - 1) {
                 changeChapter(1);
-                setTimeout(() => toggleAudio(), 1000); 
+                // Đợi một chút rồi kích hoạt lại để lách cơ chế chặn tự động của iOS Safari
+                setTimeout(() => {
+                    if (currentChapterIndex < chapters.length) {
+                        toggleAudio();
+                    }
+                }, 600);
             } else {
                 stopBackgroundKeepAlive();
             }
@@ -600,6 +600,8 @@
             btn.classList.remove('audio-active');
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         } else {
+            synth.cancel();
+
             const contentElem = document.getElementById('chapter-content');
             if (!contentElem) return;
             const fullText = contentElem.innerText;
@@ -622,7 +624,9 @@
             }
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 
-            playNextSentence();
+            setTimeout(() => {
+                if (isSpeaking) playNextSentence();
+            }, 100);
         }
     }
 
@@ -677,7 +681,6 @@
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
     }
 
-    // === HỆ THỐNG XỬ LÝ VĂN BẢN CHUNG (CHO CẢ ONLINE & OFFLINE) ===
     function parseStoryText(text, isOffline = false, customTitle = null) {
         const regex = /===\s*(.*?)\s*===/g;
         let matches = [];
@@ -734,23 +737,20 @@
         renderChapter();
     }
 
-    // === TÍNH NĂNG ĐỌC TRUYỆN OFFLINE (FILEREADER API) ===
     function loadOfflineStory(input) {
         const file = input.files[0];
         if (!file) return;
 
-        if (isSpeaking) toggleAudio(); // Tắt âm thanh bài cũ nếu đang đọc
+        if (isSpeaking) toggleAudio();
 
         const reader = new FileReader();
         reader.onload = function(e) {
             const text = e.target.result;
             
-            // Lưu truyện vào bộ nhớ điện thoại để lần sau mở app không cần tải lại
             localStorage.setItem('offline-story-content', text);
             localStorage.setItem('offline-story-name', file.name);
-            localStorage.removeItem('current-chapter-index'); // Reset về chương 1 cho truyện mới
+            localStorage.removeItem('current-chapter-index');
             
-            // Hiện nút quay lại truyện mặc định
             const resetBtn = document.getElementById('reset-default-btn');
             if (resetBtn) resetBtn.style.display = 'inline-block';
 
@@ -760,7 +760,6 @@
         reader.readAsText(file, "UTF-8");
     }
 
-    // === NÚT QUAY LẠI TRUYỆN MẶC ĐỊNH ===
     function resetToDefaultStory() {
         if (isSpeaking) toggleAudio();
         localStorage.removeItem('offline-story-content');
@@ -773,9 +772,7 @@
         loadStoryFile();
     }
 
-    // === TẢI TRUYỆN KHI MỞ APP ===
     async function loadStoryFile() {
-        // Kiểm tra xem trước đó người dùng có đang đọc truyện Offline không
         const savedOfflineContent = localStorage.getItem('offline-story-content');
         const savedOfflineName = localStorage.getItem('offline-story-name');
         
@@ -809,6 +806,7 @@
 
     function renderChapter() {
         if (chapters.length === 0) return;
+        
         if (isSpeaking) {
             isUserStopping = true;
             synth.cancel();
@@ -861,7 +859,7 @@
             let wasSpeaking = isSpeaking;
             renderChapter();
             if (wasSpeaking) {
-                setTimeout(() => toggleAudio(), 300);
+                setTimeout(() => toggleAudio(), 400);
             }
         }
     }
