@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THUẬN ĐỌC TRUYỆN</title>
-    <link rel="preconnect" href="https://googleapis.com">
-    <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -215,7 +215,7 @@
             gap: 5px;
         }
 
-        .tool-group button, .tool-group select, .toc-header button {
+        .tool-group button, .tool-group select, .toc-header button, .tool-btn {
             background-color: var(--bg-body);
             color: var(--text-color);
             border: 1px solid var(--border-color);
@@ -224,6 +224,8 @@
             cursor: pointer;
             font-size: 13px;
         }
+
+        .tool-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .audio-active {
             background-color: #2ecc71 !important;
@@ -336,6 +338,7 @@
     let currentSpeed = 1.0;
     let sleepTimeout = null;
     let countdownInterval = null;
+    let sleepEndTime = 0; // mốc thời gian (ms) hết giờ hẹn, 0 = đang tắt
 
     let lastScrollTop = 0;
     let isMenuManuallyClosed = false;
@@ -369,7 +372,7 @@
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: title,
                 artist: 'Thuận Đọc Truyện (Audio AI)',
-                album: localStorage.getItem('offline-story-name') || 'Con Đường Bá Chủ'
+                album: localStorage.getItem('offline-story-name') || 'Dị Thế Ma Hoàng'
             });
 
             // Lắng nghe sự kiện bấm nút trên AirPods / Màn hình khóa
@@ -528,18 +531,36 @@
         return femaleVoice;
     }
 
+    // Cắt đoạn dài (>160 ký tự) thành các khúc nhỏ, ưu tiên ngắt sau dấu phẩy / khoảng trắng.
+    // Không bỏ sót ký tự nào (kể cả khi gặp một từ quá dài không có khoảng trắng).
+    function splitLong(part, max = 160) {
+        const out = [];
+        let rest = part;
+        while (rest.length > max) {
+            let cut = rest.lastIndexOf(', ', max);
+            if (cut < 40) cut = rest.lastIndexOf(' ', max);
+            if (cut <= 0) cut = max;
+            else cut += 1;
+            const piece = rest.slice(0, cut).trim();
+            if (piece) out.push(piece);
+            rest = rest.slice(cut).trim();
+        }
+        if (rest) out.push(rest);
+        return out;
+    }
+
     function chunkText(text) {
-        let raw = text.replace(/([.?!;\n]+)/g, "$1|").split("|");
+        // Tách theo dấu câu nhưng giữ nguyên dấu, không dùng ký tự đánh dấu "|" nên không lỗi nếu truyện có "|"
+        const raw = text.match(/[^.?!;\n]*[.?!;\n]+|[^.?!;\n]+$/g) || [];
         let chunks = [];
         let temp = "";
         for (let i = 0; i < raw.length; i++) {
             let part = raw[i].trim();
             if (!part) continue;
-            
+
             if (part.length >= 180) {
                 if (temp) { chunks.push(temp); temp = ""; }
-                let subParts = part.match(/.{1,160}(?:[,\\s]|$)/g) || [part];
-                subParts.forEach(sp => { if (sp.trim()) chunks.push(sp.trim()); });
+                splitLong(part).forEach(sp => chunks.push(sp));
                 continue;
             }
 
@@ -556,6 +577,7 @@
 
     function playNextSentence() {
         if (!isSpeaking) return;
+        if (checkSleepTimer()) return;
         
         if (currentSentenceIndex >= sentenceArray.length) {
             isSpeaking = false;
@@ -666,43 +688,136 @@
         }
     }
 
+    function formatCountdown(ms) {
+        const total = Math.max(0, Math.ceil(ms / 1000));
+        const mins = Math.floor(total / 60);
+        const secs = total % 60;
+        return `(${mins}:${secs < 10 ? '0' : ''}${secs})`;
+    }
+
+    function finishSleepTimer() {
+        clearTimeout(sleepTimeout);
+        clearInterval(countdownInterval);
+        sleepEndTime = 0;
+        const sel = document.getElementById('sleep-timer');
+        if (sel) sel.value = "0";
+        if (isSpeaking) toggleAudio();
+        const label = document.getElementById('timer-countdown');
+        if (label) {
+            label.innerText = "⏹ Đã hết giờ, đã dừng đọc";
+            label.style.display = 'inline';
+            setTimeout(() => {
+                if (!sleepEndTime) label.style.display = 'none';
+            }, 6000);
+        }
+    }
+
+    // Kiểm tra theo mốc thời gian thật (Date.now) nên vẫn đúng dù tab bị làm chậm khi khoá màn hình
+    function checkSleepTimer() {
+        if (!sleepEndTime) return false;
+        const remaining = sleepEndTime - Date.now();
+        if (remaining <= 0) {
+            finishSleepTimer();
+            return true;
+        }
+        const label = document.getElementById('timer-countdown');
+        if (label) label.innerText = formatCountdown(remaining);
+        return false;
+    }
+
     function startSleepTimer(minutes) {
         const val = parseInt(minutes);
         const countdownLabel = document.getElementById('timer-countdown');
         if (!countdownLabel) return;
-        
+
         clearTimeout(sleepTimeout);
         clearInterval(countdownInterval);
+        sleepEndTime = 0;
         countdownLabel.style.display = 'none';
 
-        if (val === 0) return;
+        if (!val) return;
 
-        let timeRemaining = val * 60; 
+        sleepEndTime = Date.now() + val * 60 * 1000;
         countdownLabel.style.display = 'inline';
-        
-        function updateCountdownDisplay() {
-            let mins = Math.floor(timeRemaining / 60);
-            let secs = timeRemaining % 60;
-            countdownLabel.innerText = `(${mins}:${secs < 10 ? '0' : ''}${secs})`;
-        }
-        updateCountdownDisplay();
+        countdownLabel.innerText = formatCountdown(val * 60 * 1000);
 
-        countdownInterval = setInterval(() => {
-            timeRemaining--;
-            if (timeRemaining <= 0) {
-                clearInterval(countdownInterval);
-                countdownLabel.style.display = 'none';
-                document.getElementById('sleep-timer').value = "0";
-                if (isSpeaking) { toggleAudio(); }
-                alert("⏱ Đã hết giờ hẹn! Ứng dụng đã dừng đọc Audio.");
-            } else {
-                updateCountdownDisplay();
-            }
-        }, 1000);
+        // Cập nhật hiển thị mỗi giây (chỉ để vẽ số, độ chính xác dựa vào sleepEndTime)
+        countdownInterval = setInterval(checkSleepTimer, 1000);
+        // Hẹn giờ tắt chính xác (có thể bị trễ khi chạy nền, đã có thêm kiểm tra ở mỗi câu đọc)
+        sleepTimeout = setTimeout(checkSleepTimer, val * 60 * 1000 + 50);
     }
+
+    // Quay lại ứng dụng / mở lại màn hình: kiểm tra ngay xem đã hết giờ chưa
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkSleepTimer();
+    });
 
     if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = getVietnameseFemaleVoice;
+    }
+
+    // === LƯU TRUYỆN OFFLINE BẰNG INDEXEDDB (không bị giới hạn ~5MB như localStorage) ===
+    const IDB_NAME = 'thuan-doc-truyen';
+    const IDB_STORE = 'kv';
+
+    function idbOpen() {
+        return new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) {
+                reject(new Error('Trình duyệt không hỗ trợ IndexedDB'));
+                return;
+            }
+            const req = indexedDB.open(IDB_NAME, 1);
+            req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error || new Error('Không mở được IndexedDB'));
+        });
+    }
+
+    async function idbSet(key, value) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(value, key);
+            tx.oncomplete = () => { db.close(); resolve(); };
+            tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Ghi IndexedDB thất bại')); };
+        });
+    }
+
+    async function idbGet(key) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(key);
+            tx.oncomplete = () => { db.close(); resolve(req.result); };
+            tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Đọc IndexedDB thất bại')); };
+        });
+    }
+
+    async function idbDelete(key) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).delete(key);
+            tx.oncomplete = () => { db.close(); resolve(); };
+            tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Xoá IndexedDB thất bại')); };
+        });
+    }
+
+    // Lấy truyện offline đã lưu; tự chuyển truyện cũ từ localStorage (bản cũ) sang IndexedDB
+    async function getSavedOfflineStory() {
+        let content = null;
+        try { content = await idbGet('offline-story-content'); } catch (e) { console.warn(e); }
+        if (!content) {
+            const legacy = localStorage.getItem('offline-story-content');
+            if (legacy) {
+                content = legacy;
+                try {
+                    await idbSet('offline-story-content', legacy);
+                    localStorage.removeItem('offline-story-content');
+                } catch (e) { console.warn(e); }
+            }
+        }
+        return content;
     }
 
     function parseStoryText(text, isOffline = false, customTitle = null) {
@@ -768,42 +883,61 @@
         if (isSpeaking) toggleAudio();
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             const text = e.target.result;
-            
-            localStorage.setItem('offline-story-content', text);
-            localStorage.setItem('offline-story-name', file.name);
+
+            let saved = true;
+            try {
+                await idbSet('offline-story-content', text);
+            } catch (err) {
+                console.error('Không lưu được truyện offline:', err);
+                saved = false;
+            }
+
+            if (saved) {
+                localStorage.setItem('offline-story-name', file.name);
+                localStorage.removeItem('offline-story-content'); // dọn bản cũ (nếu có)
+            }
             localStorage.removeItem('current-chapter-index');
-            
+
             const resetBtn = document.getElementById('reset-default-btn');
             if (resetBtn) resetBtn.style.display = 'inline-block';
 
             parseStoryText(text, true, file.name);
-            alert("🎉 Đã tải và lưu truyện Offline: " + file.name);
+            if (saved) {
+                alert("🎉 Đã tải và lưu truyện Offline: " + file.name);
+            } else {
+                alert("⚠️ Đã mở truyện \"" + file.name + "\" nhưng KHÔNG lưu được (hết bộ nhớ hoặc trình duyệt chặn lưu trữ). Truyện sẽ mất khi tải lại trang.");
+            }
+        };
+        reader.onerror = function() {
+            alert("⚠️ Không đọc được file này. Bạn thử chọn lại file .txt nhé!");
         };
         reader.readAsText(file, "UTF-8");
+        input.value = ''; // cho phép chọn lại cùng một file
     }
 
-    function resetToDefaultStory() {
+    async function resetToDefaultStory() {
         if (isSpeaking) toggleAudio();
+        try { await idbDelete('offline-story-content'); } catch (e) { console.warn(e); }
         localStorage.removeItem('offline-story-content');
         localStorage.removeItem('offline-story-name');
         localStorage.removeItem('current-chapter-index');
-        
+
         const resetBtn = document.getElementById('reset-default-btn');
         if (resetBtn) resetBtn.style.display = 'none';
-        
+
         loadStoryFile();
     }
 
     async function loadStoryFile() {
-        const savedOfflineContent = localStorage.getItem('offline-story-content');
+        const savedOfflineContent = await getSavedOfflineStory();
         const savedOfflineName = localStorage.getItem('offline-story-name');
-        
+
         if (savedOfflineContent) {
             const resetBtn = document.getElementById('reset-default-btn');
             if (resetBtn) resetBtn.style.display = 'inline-block';
-            
+
             parseStoryText(savedOfflineContent, false, savedOfflineName);
             return;
         }
@@ -816,7 +950,7 @@
             const buffer = await response.arrayBuffer();
             const decoder = new TextDecoder('utf-8');
             const text = decoder.decode(buffer);
-            
+
             parseStoryText(text);
         } catch (error) {
             const contentElem = document.getElementById('chapter-content');
